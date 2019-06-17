@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
 import android.telecom.Call
 import android.util.Log
 import android.widget.Toast
@@ -37,17 +38,17 @@ import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.api.tilequery.MapboxTilequery
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import com.mapbox.mapboxsdk.style.expressions.Expression
 import java.lang.Exception
 import java.lang.ref.WeakReference
 import javax.security.auth.callback.Callback
 
 
-class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener, MapboxMap.OnMapClickListener {
+class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener  {
 
     private var permissionsManager: PermissionsManager = PermissionsManager(this)
     private lateinit var mapboxMap: MapboxMap
     private lateinit var mapView: MapView
-    private val CLICK_CENTER_GEOJSON_SOURCE_ID = "CLICK_CENTER_GEOJSON_SOURCE_ID"
     private val RESULT_GEOJSON_SOURCE_ID = "RESULT_GEOJSON_SOURCE_ID"
     private val LAYER_ID = "LAYER_ID"
     private lateinit var locationEngine: LocationEngine
@@ -72,10 +73,11 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
      //        "mapbox://styles/mapbox/cjerxnqt3cgvp2rmyuxbeqme7")){
         mapboxMap.setStyle(Style.MAPBOX_STREETS, object:  Style.OnStyleLoaded {
             override fun onStyleLoaded(style: Style) {
-                addClickLayer(style)
+             //  addClickLayer(style)
+            //  mapboxMap.addOnMapClickListener(this@MapBoxActivity)
                 addResultLayer(style)
                 enableLocationComponent(style)
-                mapboxMap.addOnMapClickListener(this@MapBoxActivity)
+
 
             }
 
@@ -86,21 +88,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     //    }
     }
 
-    override fun onMapClick(point: LatLng): Boolean {
-        var style: Style? = mapboxMap.style
-        if (style != null){
-            var clickLocationSource: GeoJsonSource?  = style.getSourceAs(CLICK_CENTER_GEOJSON_SOURCE_ID )
-            if (clickLocationSource != null) {
-                clickLocationSource.setGeoJson(Feature.fromGeometry(Point.fromLngLat(point.longitude,
-                    point.latitude
-                )))
-            }
-
-            makeTilequeryApiCall(style, point)
-            return true
-        }
-        return false
-    }
 
     fun makeTilequeryApiCall(style: Style, point: LatLng){
         var tilequery: MapboxTilequery = MapboxTilequery.builder()
@@ -120,11 +107,55 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 response: retrofit2.Response<FeatureCollection>
             ) {
                 val resultSource: GeoJsonSource ?= style.getSourceAs(RESULT_GEOJSON_SOURCE_ID)
-                //if (resultSource != null && response.body()?.features() != null){
-                val featureCollection = response.body()?.features()
-                resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
+                if (resultSource != null && response.body()?.features() != null) {
+                    val featureCollection = response.body()?.features()
+                    resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
+                    val toJsonResponse = response.body()?.toJson()
+                  //  Log.v("RESPONSE",toJsonResponse )
+                  //  val distance = featureCollection!![0].getProperty("tilequery").asJsonObject.get("distance").toString()
+                 //   Log.v("RESPONSE", distance)
 
-                //}
+
+
+                    val featureSize = featureCollection?.size
+
+                    if (featureSize!! > 0){
+                        for (feature in featureCollection){
+                            if (feature != null) {
+                                var distance = 0.0
+                                var category_en = " "
+                                var name = " "
+
+                                // distance from user
+                                if (feature.hasProperty("tilequery")) {
+                                    distance =
+                                        feature.getProperty("tilequery").asJsonObject.get("distance").toString()
+                                            .toDouble()
+                                }
+                                // categories e.g. shop, cafe, casino
+                                if (feature.hasProperty("category_en")) {
+                                    category_en = feature.getProperty("category_en").toString()
+                                }
+
+                                if (feature.hasProperty("name")) {
+                                    name = feature.getProperty("name").toString()
+                                }
+
+                                val output = category_en + ": " + name + ", " + String.format("%.2f", distance) + " meters away"
+                                Log.v("RESPONSE", output)
+                            }
+
+                        }
+
+
+
+                    }
+                        Log.v("RESPONSE", "5s past")
+
+
+                }
+
+
             }
 
             override fun onFailure(call: retrofit2.Call<FeatureCollection>, t: Throwable) {
@@ -134,27 +165,10 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         })
     }
 
-    private fun addClickLayer(loadedMapStyle: Style){
-        loadedMapStyle.addImage("CLICK-ICON-ID",BitmapFactory.decodeResource(
-            this.resources, R.drawable.red_marker_s))
 
-        loadedMapStyle.addSource(
-            GeoJsonSource(
-                CLICK_CENTER_GEOJSON_SOURCE_ID ,
-                FeatureCollection.fromFeatures(arrayOf<Feature>())
-            )
-        )
-
-        loadedMapStyle.addLayer(
-            SymbolLayer("click-layer", CLICK_CENTER_GEOJSON_SOURCE_ID).withProperties(
-                iconImage("CLICK-ICON-ID"),
-                iconOffset(arrayOf(0f, -12f)),
-                iconIgnorePlacement(true),
-                iconAllowOverlap(true)
-            )
-        )
-    }
-
+    /**
+     * Result layer: Add PoI icon
+     */
     private fun addResultLayer(loadedMapStyle: Style){
         loadedMapStyle.addImage("RESULT-ICON-ID", BitmapFactory.decodeResource(
             this.resources, R.drawable.blue_marker_s))
@@ -176,10 +190,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         )
     }
 
+    /**
+     * Location component and permissions
+     */
     @SuppressLint("MissingPermission")
     private fun enableLocationComponent(loadedMapStyle: Style){
         if (PermissionsManager.areLocationPermissionsGranted(this)){
-
             val options = LocationComponentOptions.builder(this)
                 .trackingGesturesManagement(true)
                 .accuracyColor(Color.GREEN)
@@ -201,14 +217,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             locationComponent.cameraMode = CameraMode.TRACKING
             locationComponent.renderMode = RenderMode.COMPASS
 
-            mapboxMap.animateCamera(
-                CameraUpdateFactory
-                    .newCameraPosition(
-                        CameraPosition.Builder()
-                            .zoom(22.0)
-                            .build()
-                    ), 2000
-            )
+
 
             initLocationEngine()
         } else{
@@ -227,7 +236,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             .setMaxWaitTime(5000).build()
 
         if (request != null) {
-            locationEngine.requestLocationUpdates(request, callback, getMainLooper())
+            locationEngine.requestLocationUpdates(request, callback, mainLooper)
         }
         locationEngine.getLastLocation(callback)
     }
@@ -276,6 +285,10 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     override fun onDestroy() {
         super.onDestroy()
+        // Prevent leaks
+        if (locationEngine != null) {
+            locationEngine.removeLocationUpdates(callback);
+        }
         mapView.onDestroy()
     }
 
@@ -289,27 +302,31 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             var activity : MapBoxActivity = activityWeakReference?.get()!!
 
             if (activity != null) {
-                Toast.makeText(activity, exception.getLocalizedMessage(),
-                    Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, exception.localizedMessage,
+                    Toast.LENGTH_SHORT).show()
             }
         }
 
         override fun onSuccess(result: LocationEngineResult?) {
             var activity : MapBoxActivity = activityWeakReference?.get()!!
             if (activity != null) {
-                var location: Location? = result?.lastLocation
-                if ( location == null ){
-                    return;
-                }
 
-              //  Toast.makeText(activity, "New location" + " " +
-               //     result?.getLastLocation()?.getLatitude().toString() + " " + result?.getLastLocation()?.getLongitude().toString(),
-              //      Toast.LENGTH_SHORT).show()
-                var point : LatLng ?= LatLng(result?.getLastLocation()?.getLatitude()!!, result?.getLastLocation()?.getLongitude()!!)
+                var point : LatLng ?= LatLng(result?.lastLocation?.latitude!!, result.lastLocation?.longitude!!)
+                // Make tile query
                 activity.makeTilequeryApiCall(activity.mapboxMap.style!!,point!!)
 
-                if (activity.mapboxMap != null && result?.lastLocation != null){
+
+
+                if (activity.mapboxMap != null && result.lastLocation != null){
                     activity.mapboxMap.locationComponent.forceLocationUpdate(result.lastLocation)
+                    val position = CameraPosition.Builder()
+                        .target(point)
+                        .zoom(18.0)
+                        .tilt(0.0)
+                        .build()
+
+                    activity.mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+
                 }
             }
         }
@@ -321,4 +338,50 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             this.activityWeakReference = WeakReference<MapBoxActivity>(activity)
         }
     }
+
+    /**
+     * Add icon on map click
+    private fun addClickLayer(loadedMapStyle: Style){
+    loadedMapStyle.addImage("CLICK-ICON-ID",BitmapFactory.decodeResource(
+    this.resources, R.drawable.red_marker_s))
+
+    loadedMapStyle.addSource(
+    GeoJsonSource(
+    CLICK_CENTER_GEOJSON_SOURCE_ID ,
+    FeatureCollection.fromFeatures(arrayOf<Feature>())
+    )
+    )
+
+    loadedMapStyle.addLayer(
+    SymbolLayer("click-layer", CLICK_CENTER_GEOJSON_SOURCE_ID).withProperties(
+    iconImage("CLICK-ICON-ID"),
+    iconOffset(arrayOf(0f, -12f)),
+    iconIgnorePlacement(true),
+    iconAllowOverlap(true)
+    )
+    )
+    }
+     */
+
+
+    /**
+     * On map click listener
+
+    override fun onMapClick(point: LatLng): Boolean {
+    var style: Style? = mapboxMap.style
+    if (style != null){
+    var clickLocationSource: GeoJsonSource?  = style.getSourceAs(CLICK_CENTER_GEOJSON_SOURCE_ID )
+    if (clickLocationSource != null) {
+    clickLocationSource.setGeoJson(Feature.fromGeometry(Point.fromLngLat(point.longitude,
+    point.latitude
+    )))
+    }
+
+    makeTilequeryApiCall(style, point)
+    return true
+    }
+    return false
+    }
+     */
+
 }
