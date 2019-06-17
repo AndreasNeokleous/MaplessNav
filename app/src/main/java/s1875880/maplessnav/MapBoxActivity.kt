@@ -53,6 +53,9 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private val LAYER_ID = "LAYER_ID"
     private lateinit var locationEngine: LocationEngine
     private val callback = MapBoxLocationCallback(this)
+    private var curPoI  = arrayListOf<PoI>()
+    private var lastLocation: LatLng? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,6 +66,11 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
+
+
+    //    Handler().postDelayed({
+
+    //    }, 5000)
 
 
     }
@@ -110,7 +118,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 if (resultSource != null && response.body()?.features() != null) {
                     val featureCollection = response.body()?.features()
                     resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
-                    val toJsonResponse = response.body()?.toJson()
+                  //  val toJsonResponse = response.body()?.toJson()
                   //  Log.v("RESPONSE",toJsonResponse )
                   //  val distance = featureCollection!![0].getProperty("tilequery").asJsonObject.get("distance").toString()
                  //   Log.v("RESPONSE", distance)
@@ -118,31 +126,39 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
 
                     val featureSize = featureCollection?.size
-
+                    if (curPoI!=null)
+                        curPoI!!.clear()
                     if (featureSize!! > 0){
                         for (feature in featureCollection){
                             if (feature != null) {
+
                                 var distance = 0.0
                                 var category_en = " "
                                 var name = " "
+                                val poI = PoI(distance, category_en, name)
 
                                 // distance from user
                                 if (feature.hasProperty("tilequery")) {
                                     distance =
                                         feature.getProperty("tilequery").asJsonObject.get("distance").toString()
                                             .toDouble()
+                                    poI.distance = distance
                                 }
                                 // categories e.g. shop, cafe, casino
                                 if (feature.hasProperty("category_en")) {
                                     category_en = feature.getProperty("category_en").toString()
+                                    poI.category_en = category_en
                                 }
 
                                 if (feature.hasProperty("name")) {
                                     name = feature.getProperty("name").toString()
+                                    poI.name = name
                                 }
 
+                                curPoI!!.add(poI)
+
                                 val output = category_en + ": " + name + ", " + String.format("%.2f", distance) + " meters away"
-                                Log.v("RESPONSE", output)
+                                //Log.v("RESPONSE", output)
                             }
 
                         }
@@ -150,8 +166,9 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
 
                     }
-                        Log.v("RESPONSE", "5s past")
-
+                     //   Log.v("RESPONSE", "5s past")
+                  //  Handler().postDelayed({
+                   // }, 5000)
 
                 }
 
@@ -231,7 +248,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private fun initLocationEngine(){
         locationEngine = LocationEngineProvider.getBestLocationEngine(this)
 
-        var request : LocationEngineRequest ?= LocationEngineRequest.Builder(1000)
+        var request : LocationEngineRequest ?= LocationEngineRequest.Builder(5000)
             .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
             .setMaxWaitTime(5000).build()
 
@@ -312,6 +329,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             if (activity != null) {
 
                 var point : LatLng ?= LatLng(result?.lastLocation?.latitude!!, result.lastLocation?.longitude!!)
+
                 // Make tile query
                 activity.makeTilequeryApiCall(activity.mapboxMap.style!!,point!!)
 
@@ -328,6 +346,21 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                     activity.mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position))
 
                 }
+
+                // Initialise lastLocation, update and announce every 10 meters
+                if (activity.lastLocation == null){
+                    activity.lastLocation = point
+                }else if (point.distanceTo(activity.lastLocation!!)>=10){
+                    Log.v("RESPONSE", point.distanceTo(activity.lastLocation!!).toString())
+                    if (activity.curPoI !=null ){
+                        for (poi in activity.curPoI!!){
+                            val output = poi.category_en + ": " + poi.name + ", " + String.format("%.2f", poi.distance) + " meters away"
+                            Log.v("RESPONSE", output)
+                        }
+                        activity.lastLocation = point
+                        Log.v("RESPONSE", "---10m--- ")
+                    }
+                } //else stopped
             }
         }
 
