@@ -1,11 +1,16 @@
 package s1875880.maplessnav
 
 import android.annotation.SuppressLint
+import android.app.Service
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.maps.MapView
@@ -31,9 +36,12 @@ import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import java.lang.Exception
 import java.lang.ref.WeakReference
+import java.util.*
+import java.util.Collections.replaceAll
 
 
-class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener  {
+class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener , TextToSpeech.OnInitListener {
+
 
     private var permissionsManager: PermissionsManager = PermissionsManager(this)
     private lateinit var mapboxMap: MapboxMap
@@ -45,6 +53,11 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private val callback = MapBoxLocationCallback(this)
     private var curPoI  = arrayListOf<PoI>()
     private var lastLocation: LatLng? = null
+
+    //TTS
+    private val ACT_CHECK_TTS_DATA = 12345
+    private var mTTS: TextToSpeech? = null
+    private var imm: InputMethodManager? = null;
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,12 +71,27 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         mapView.getMapAsync(this)
 
 
+
+        //TTS
+
+        imm = this.getSystemService(Service.INPUT_METHOD_SERVICE) as InputMethodManager?
+        if ( mTTS == null) {
+            var ttsIntent: Intent? = Intent()
+            ttsIntent!!.action = TextToSpeech.Engine.ACTION_CHECK_TTS_DATA
+            startActivityForResult(ttsIntent, ACT_CHECK_TTS_DATA)
+        }else{
+            // TTs ready
+        }
+
+
+
     //    Handler().postDelayed({
 
     //    }, 5000)
 
 
     }
+
 
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
@@ -313,42 +341,47 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     }
 
     override fun onStart() {
+        mapView.onStart()
         super.onStart()
-        mapView?.onStart()
     }
 
     override fun onResume() {
+        mapView.onResume()
         super.onResume()
-        mapView?.onResume()
     }
 
     override fun onPause() {
+        mapView.onPause()
         super.onPause()
-        mapView?.onPause()
     }
 
     override fun onStop() {
+        mapView.onStop()
         super.onStop()
-        mapView?.onStop()
     }
 
     override fun onLowMemory() {
+
+        mapView.onLowMemory()
         super.onLowMemory()
-        mapView?.onLowMemory()
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         // Prevent leaks
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
         }
-        mapView?.onDestroy()
+        mapView.onDestroy()
+        if (mTTS !=null){
+            mTTS!!.stop()
+            mTTS!!.shutdown()
+        }
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
+        mapView.onSaveInstanceState(outState)
         super.onSaveInstanceState(outState)
-        mapView?.onSaveInstanceState(outState)
     }
 
     private class MapBoxLocationCallback : LocationEngineCallback<LocationEngineResult> {
@@ -389,7 +422,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 // Initialise lastLocation, update and announce every 10 meters
                 if (activity.lastLocation == null){
                     activity.lastLocation = point
-                }else if (point.distanceTo(activity.lastLocation!!)>=3){
+                }else if (point.distanceTo(activity.lastLocation!!)>=10){
                     Log.v("RESPONSE", "\n")
                     Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastLocation!!).toString())
 
@@ -453,6 +486,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                     Log.v("BEARING", "Closest PoI: " + closesPoIPoistion +" " + poIbring.toString() )
                     Log.v("RESPONSE", "---10m--- ")
+                    var announcement: String = minDistancePoI?.name + " " + minDistancePoI?.category_en + " to your " + closesPoIPoistion
+                    // Trim " "
+                    announcement = announcement.replace("\"", "")
+                    Log.v("ANNOUNCE", announcement)
+
+                    activity.speakText(announcement)
 
 
                 }
@@ -465,11 +504,54 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             }
         }
 
+
         private var activityWeakReference: WeakReference<MapBoxActivity>?
 
         constructor(activity: MapBoxActivity)
         {
             this.activityWeakReference = WeakReference<MapBoxActivity>(activity)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == ACT_CHECK_TTS_DATA){
+            if (resultCode === TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
+                // Data exists, so we instantiate the TTS engine
+                mTTS = TextToSpeech(this, this)
+            } else {
+                // Data is missing, so we start the TTS installation process
+                val installIntent = Intent()
+                installIntent.action = TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA
+                startActivity(installIntent)
+            }
+        }
+        else{
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    override fun onInit(status: Int) {
+        if (status === TextToSpeech.SUCCESS) {
+            if (mTTS != null) {
+                val result = mTTS!!.setLanguage(Locale.UK)
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Toast.makeText(this, "TTS language is not supported", Toast.LENGTH_LONG).show()
+                } else {
+                    // Do smth
+                }
+            }
+        } else {
+            Toast.makeText(this, "TTS initialization failed", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun speakText(text: String ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (mTTS!=null)
+            mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+        } else {
+            if (mTTS!=null)
+            mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null);
         }
     }
 
