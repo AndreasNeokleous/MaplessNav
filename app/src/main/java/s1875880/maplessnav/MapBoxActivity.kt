@@ -3,19 +3,13 @@ package s1875880.maplessnav
 import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.telecom.Call
 import android.util.Log
 import android.widget.Toast
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
-import androidx.annotation.NonNull
-import androidx.core.content.ContextCompat
-import com.google.android.gms.common.api.Response
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
@@ -24,11 +18,8 @@ import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.location.LocationComponentOptions
 import com.mapbox.mapboxsdk.location.modes.CameraMode
 import com.mapbox.mapboxsdk.location.modes.RenderMode
-import com.mapbox.mapboxsdk.maps.Style.OnStyleLoaded
-import com.mapbox.mapboxsdk.maps.Style.MAPBOX_STREETS
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.Style
-import kotlinx.android.synthetic.main.activity_map_box.*
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.mapboxsdk.geometry.LatLng
@@ -38,10 +29,8 @@ import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.api.tilequery.MapboxTilequery
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
-import com.mapbox.mapboxsdk.style.expressions.Expression
 import java.lang.Exception
 import java.lang.ref.WeakReference
-import javax.security.auth.callback.Callback
 
 
 class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener  {
@@ -50,6 +39,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private lateinit var mapboxMap: MapboxMap
     private lateinit var mapView: MapView
     private val RESULT_GEOJSON_SOURCE_ID = "RESULT_GEOJSON_SOURCE_ID"
+    val CLOSES_POI_SOURCE_ID = "CLOSES_POI_SOURCE_ID"
     private val LAYER_ID = "LAYER_ID"
     private lateinit var locationEngine: LocationEngine
     private val callback = MapBoxLocationCallback(this)
@@ -79,12 +69,18 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         this.mapboxMap = mapboxMap
      //   mapboxMap.setStyle(Style.Builder().fromUrl(
      //        "mapbox://styles/mapbox/cjerxnqt3cgvp2rmyuxbeqme7")){
+        // Show compass
+        mapboxMap.uiSettings.isCompassEnabled = true
+        // Disable fading animation
+        mapboxMap.uiSettings.setCompassFadeFacingNorth(false)
+
         mapboxMap.setStyle(Style.MAPBOX_STREETS, object:  Style.OnStyleLoaded {
             override fun onStyleLoaded(style: Style) {
              //  addClickLayer(style)
             //  mapboxMap.addOnMapClickListener(this@MapBoxActivity)
                 addResultLayer(style)
                 enableLocationComponent(style)
+                addClosesPoILayer(style)
 
 
             }
@@ -131,11 +127,13 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                     if (featureSize!! > 0){
                         for (feature in featureCollection){
                             if (feature != null) {
-
+                                //Adding PoI to list
                                 var distance = 0.0
                                 var category_en = " "
                                 var name = " "
-                                val poI = PoI(distance, category_en, name)
+                                var lat = 0.0
+                                var long = 0.0
+                                val poI = PoI(distance, category_en, name, lat, long)
 
                                 // distance from user
                                 if (feature.hasProperty("tilequery")) {
@@ -155,10 +153,14 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                                     poI.name = name
                                 }
 
+                                val position1 = feature.geometry() as Point
+                                lat = position1.latitude()
+                                long = position1.longitude()
+                                poI.lat = lat
+                                poI.long = long
+
                                 curPoI!!.add(poI)
 
-                                val output = category_en + ": " + name + ", " + String.format("%.2f", distance) + " meters away"
-                                //Log.v("RESPONSE", output)
                             }
 
                         }
@@ -208,6 +210,39 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     }
 
     /**
+     * Closes PoI layer
+     */
+    private fun addClosesPoILayer(loadedMapStyle: Style){
+        loadedMapStyle.addImage("CLOSES-POI-ID", BitmapFactory.decodeResource(
+            this.resources, R.drawable.red_marker_s))
+
+    //    var geoJsonSource: GeoJsonSource = GeoJsonSource("poi-geo", Feature.fromGeometry(
+    //       Point.fromLngLat(latLng.longitude,latLng.latitude)
+    //    ))
+    //    loadedMapStyle.addSource(geoJsonSource)
+
+        loadedMapStyle.addSource(
+            GeoJsonSource(
+                CLOSES_POI_SOURCE_ID, FeatureCollection.fromFeatures(arrayOf<Feature>())
+            )
+        )
+
+        loadedMapStyle.addLayer(
+            SymbolLayer("closes-poi-layer",CLOSES_POI_SOURCE_ID).withProperties(
+                iconImage("CLOSES-POI-ID"),
+                iconOffset(arrayOf(0f, -12f)),
+                iconIgnorePlacement(true),
+                iconAllowOverlap(true)
+            )
+        )
+
+       // var symbolLayer: SymbolLayer = SymbolLayer("closes-poi-layer","poi-geo" )
+        // symbolLayer.withProperties(PropertyFactory.iconImage("closes-poi-marker"))
+
+    }
+
+
+    /**
      * Location component and permissions
      */
     @SuppressLint("MissingPermission")
@@ -232,7 +267,9 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
             // Set the component's camera mode
             locationComponent.cameraMode = CameraMode.TRACKING
-            locationComponent.renderMode = RenderMode.COMPASS
+            // Current location icon retrieved by bearing
+            locationComponent.renderMode = RenderMode.GPS
+
 
 
 
@@ -275,29 +312,29 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         }
     }
 
-    public override fun onStart() {
+    override fun onStart() {
         super.onStart()
-        mapView.onStart()
+        mapView?.onStart()
     }
 
-    public override fun onResume() {
+    override fun onResume() {
         super.onResume()
-        mapView.onResume()
+        mapView?.onResume()
     }
 
-    public override fun onPause() {
+    override fun onPause() {
         super.onPause()
-        mapView.onPause()
+        mapView?.onPause()
     }
 
-    public override fun onStop() {
+    override fun onStop() {
         super.onStop()
-        mapView.onStop()
+        mapView?.onStop()
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
-        mapView.onLowMemory()
+        mapView?.onLowMemory()
     }
 
     override fun onDestroy() {
@@ -306,12 +343,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
         }
-        mapView.onDestroy()
+        mapView?.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        mapView.onSaveInstanceState(outState)
+        mapView?.onSaveInstanceState(outState)
     }
 
     private class MapBoxLocationCallback : LocationEngineCallback<LocationEngineResult> {
@@ -345,22 +382,86 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                     activity.mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position))
 
+
+
                 }
 
                 // Initialise lastLocation, update and announce every 10 meters
                 if (activity.lastLocation == null){
                     activity.lastLocation = point
-                }else if (point.distanceTo(activity.lastLocation!!)>=10){
-                    Log.v("RESPONSE", point.distanceTo(activity.lastLocation!!).toString())
+                }else if (point.distanceTo(activity.lastLocation!!)>=3){
+                    Log.v("RESPONSE", "\n")
+                    Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastLocation!!).toString())
+
+                    // Closes PoI
+                    var minDistancePoI = activity.curPoI.minBy { it ->  it.distance }
+
+                    var poiSource: GeoJsonSource?  = activity.mapboxMap.style!!.getSourceAs(activity.CLOSES_POI_SOURCE_ID)
+                    poiSource?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(minDistancePoI!!.long,minDistancePoI!!.lat)))
+               //     activity.addClosesPoILayer(activity.mapboxMap.style!!, latLngMinDistancePoI)
+
                     if (activity.curPoI !=null ){
                         for (poi in activity.curPoI!!){
                             val output = poi.category_en + ": " + poi.name + ", " + String.format("%.2f", poi.distance) + " meters away"
                             Log.v("RESPONSE", output)
                         }
                         activity.lastLocation = point
-                        Log.v("RESPONSE", "---10m--- ")
+
                     }
-                } //else stopped
+
+                    Log.v("RESPONSE", "Closest: "+ minDistancePoI?.name.toString())
+
+                    // User bearing in range (0.0, 360.0]
+                    var userBearing = result.lastLocation?.bearing
+                    Log.v("BEARING", "User Heading: " + userBearing.toString())
+
+                    // User LatLng
+                    var lat1 = result.lastLocation?.latitude
+                    var lng1 = result.lastLocation?.longitude
+
+                    // Closes PoI LatLng
+                    var lat2  = minDistancePoI?.lat
+                    var lng2 = minDistancePoI?.long
+
+                    // Calculate bearing between User and PoI
+                    var dLon = (lng2!! - lng1!!)
+                /**    var y = Math.sin(dLon) * Math.cos(lat2!!)
+                    var x = Math.cos(lat1!!)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon)
+                    var poIbring  =Math.toDegrees((Math.atan2(y, x)))
+
+                    // Calculate closes PoI bearing in relation to user's bearing
+                    poIbring = (360 - ((poIbring + 360) % 360))
+                    */
+                    var dPhi = Math.log(Math.tan(lat2!!/2.0+Math.PI/4.0)/Math.tan(lat1!!/2.0+Math.PI/4.0))
+                    if (Math.abs(dLon) > Math.PI){
+                        if (dLon > 0.0){
+                            dLon = -(2.0 * Math.PI - dLon)
+                        }else{
+                            dLon = (2.0 * Math.PI + dLon)
+                        }
+                    }
+                    var poIbring = (Math.toDegrees(Math.atan2(dLon, dPhi))+ 360) % 360
+                    if (userBearing!!>90 && userBearing!!<270 ){
+                        poIbring = 360-poIbring
+                    }
+                    var closesPoIPoistion = "NaN"
+                    if (poIbring!=null &&  poIbring<= 180){
+                        closesPoIPoistion = "Right"
+                    }else{
+                        closesPoIPoistion = "Left"
+                    }
+
+                    Log.v("BEARING", "Closest PoI: " + closesPoIPoistion +" " + poIbring.toString() )
+                    Log.v("RESPONSE", "---10m--- ")
+
+
+                }
+
+
+
+
+
+
             }
         }
 
