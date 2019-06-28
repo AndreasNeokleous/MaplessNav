@@ -12,6 +12,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
@@ -34,6 +35,7 @@ import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.api.tilequery.MapboxTilequery
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import kotlinx.android.synthetic.main.activity_map_box.*
 import java.lang.Exception
 import java.lang.ref.WeakReference
 import java.util.*
@@ -53,6 +55,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private val callback = MapBoxLocationCallback(this)
     private var curPoI  = arrayListOf<PoI>()
     private var lastLocation: LatLng? = null
+   // private var fabButton: FloatingActionButton? = null
 
     //TTS
     private val ACT_CHECK_TTS_DATA = 12345
@@ -62,7 +65,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Mapbox.getInstance(this, "pk.eyJ1IjoiYW5kcmVhc25lb2tlbG91cyIsImEiOiJjanR5NXdoNHEwZW9kM3lwbnRobXNxdGFmIn0.LkYWF5avM-_JVB27lS25zg")
+        Mapbox.getInstance(this, getString(R.string.access_token))
         // called after access token
         setContentView(R.layout.activity_map_box)
 
@@ -73,7 +76,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
 
         //TTS
-
         imm = this.getSystemService(Service.INPUT_METHOD_SERVICE) as InputMethodManager?
         if ( mTTS == null) {
             var ttsIntent: Intent? = Intent()
@@ -83,11 +85,15 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             // TTs ready
         }
 
+      //  fabButton = findViewById(R.id.floatingActionButton)
+
+        favouritesFab.setOnClickListener {
+            val intent = Intent(this, FavouriteActivity::class.java)
+            startActivity(intent)
+        }
 
 
-    //    Handler().postDelayed({
 
-    //    }, 5000)
 
 
     }
@@ -123,7 +129,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     fun makeTilequeryApiCall(style: Style, point: LatLng){
         var tilequery: MapboxTilequery = MapboxTilequery.builder()
-            .accessToken("pk.eyJ1IjoiYW5kcmVhc25lb2tlbG91cyIsImEiOiJjanR5NXdoNHEwZW9kM3lwbnRobXNxdGFmIn0.LkYWF5avM-_JVB27lS25zg")
+            .accessToken(getString(R.string.access_token))
             .mapIds("mapbox.mapbox-streets-v8")
             .query(Point.fromLngLat(point.longitude, point.latitude))
             .radius(50)
@@ -352,21 +358,29 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     override fun onPause() {
         mapView.onPause()
+        if (mTTS !=null){
+            mTTS!!.stop()
+        }
         super.onPause()
     }
 
     override fun onStop() {
-        mapView.onStop()
         super.onStop()
+        mapView.onStop()
+        if (mTTS !=null){
+            mTTS!!.stop()
+        }
+
     }
 
     override fun onLowMemory() {
-
-        mapView.onLowMemory()
         super.onLowMemory()
+        mapView.onLowMemory()
+
     }
 
     override fun onDestroy() {
+        super.onDestroy()
         // Prevent leaks
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
@@ -376,7 +390,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             mTTS!!.stop()
             mTTS!!.shutdown()
         }
-        super.onDestroy()
+
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

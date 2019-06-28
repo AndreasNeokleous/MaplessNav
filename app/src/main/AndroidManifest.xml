@@ -12,6 +12,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".AddFavActivity"></activity>
+        <activity android:name=".FavouriteActivity" />
         <activity android:name=".MapBoxActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
