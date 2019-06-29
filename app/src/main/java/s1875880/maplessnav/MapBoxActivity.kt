@@ -346,6 +346,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         }
     }
 
+
     override fun onStart() {
         mapView.onStart()
         super.onStart()

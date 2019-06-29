@@ -47,4 +47,5 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:4.5.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:4.5.0'
     implementation 'com.google.android.material:material:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0'
 }
