@@ -2,6 +2,7 @@ package s1875880.maplessnav
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -35,7 +36,7 @@ class GeocodeResultAdapter(val context: Context, val placeNames: ArrayList<Strin
 
             // add to database on favourite click
             val dbHandler = DBHelper(context, null)
-            val fav = Favourite(placeNames?.get(position), placeCenters?.get(position).toString())
+            val fav = Favourite(placeNames?.get(position), placeCenters?.get(position)!!.toJson())
             dbHandler.addFavourite(fav)
             Toast.makeText(context, "Added to favourites", Toast.LENGTH_SHORT).show()
 

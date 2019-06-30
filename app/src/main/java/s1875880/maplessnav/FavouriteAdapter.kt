@@ -1,6 +1,7 @@
 package s1875880.maplessnav
 
 import android.content.Context
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,12 +30,11 @@ class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?,
 
         holder?.parentLayout.setOnClickListener {
 
-            Toast.makeText(context,placePoints!!.get(position),Toast.LENGTH_SHORT).show()
 
-            /*val intent = Intent(context, DirectionsActivity::class.java)
+            val intent = Intent(context, MapBoxActivity::class.java)
             intent.putExtra("placeName", placeNames?.get(position))
-            intent.putExtra("placeName", placePoints?.get(position))
-            context.startActivity(intent)*/
+            intent.putExtra("placePoint", placePoints?.get(position))
+            context.startActivity(intent)
 
 
         }

@@ -10,7 +10,9 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
+import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.Toast
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.mapbox.mapboxsdk.Mapbox
@@ -19,6 +21,10 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
+import com.mapbox.api.directions.v5.DirectionsCriteria
+import com.mapbox.api.directions.v5.MapboxDirections
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.location.LocationComponentOptions
@@ -33,13 +39,18 @@ import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 
 import com.mapbox.api.tilequery.MapboxTilequery
+import com.mapbox.core.constants.Constants.PRECISION_6
+import com.mapbox.geojson.LineString
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import com.mapbox.mapboxsdk.style.layers.LineLayer
+import com.mapbox.mapboxsdk.style.layers.Property
 import kotlinx.android.synthetic.main.activity_map_box.*
+import retrofit2.Call
+import retrofit2.Response
 import java.lang.Exception
 import java.lang.ref.WeakReference
 import java.util.*
-import java.util.Collections.replaceAll
 
 
 class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener , TextToSpeech.OnInitListener {
@@ -54,17 +65,33 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private lateinit var locationEngine: LocationEngine
     private val callback = MapBoxLocationCallback(this)
     private var curPoI  = arrayListOf<PoI>()
-    private var lastLocation: LatLng? = null
-   // private var fabButton: FloatingActionButton? = null
+    private var lastQueryLocation: LatLng? = null
+
+
+    private val ROUTE_LAYER_ID = "route-layer-id"
+    private val ROUTE_SOURCE_ID = "route-source-id"
+    private var currentRoute: DirectionsRoute?=null
+    private var directionsClient: MapboxDirections?= null
+    private var currentLocation:Point?=null
+    private var destination:Point?=null
+    private var navigationMode:Boolean?=false
+    private var cancelNav:FloatingActionButton?=null
+    var routeLayer: LineLayer ?= null
+
+
+    // private var fabButton: FloatingActionButton? = null
 
     //TTS
     private val ACT_CHECK_TTS_DATA = 12345
     private var mTTS: TextToSpeech? = null
     private var imm: InputMethodManager? = null;
+    private var lastAnnouncement: String?=null
 
 
+    @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        getIncomingIntent()
         Mapbox.getInstance(this, getString(R.string.access_token))
         // called after access token
         setContentView(R.layout.activity_map_box)
@@ -72,6 +99,8 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
+
+
 
 
 
@@ -85,14 +114,28 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             // TTs ready
         }
 
-      //  fabButton = findViewById(R.id.floatingActionButton)
+        cancelNav = findViewById(R.id.cancelNavFab)
+      //  fabButton =
+        cancelNav!!.setOnClickListener{
+            if (directionsClient!=null){
+                directionsClient!!.cancelCall()
+            }
+            currentRoute =null
+            directionsClient = null
+            currentLocation=null
+            destination=null
+            navigationMode=false
+            cancelNav!!.isClickable = false
+            cancelNav!!.isFocusable = false
+            cancelNav!!.visibility= View.INVISIBLE
+            mapboxMap!!.style!!.removeLayer(routeLayer!!)
 
+
+        }
         favouritesFab.setOnClickListener {
             val intent = Intent(this, FavouriteActivity::class.java)
             startActivity(intent)
         }
-
-
 
 
 
@@ -115,12 +158,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 addResultLayer(style)
                 enableLocationComponent(style)
                 addClosesPoILayer(style)
-
+                addRouteLayer(style)
 
             }
-
-
         })
+
+
            //
 
     //    }
@@ -148,10 +191,11 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 if (resultSource != null && response.body()?.features() != null) {
                     val featureCollection = response.body()?.features()
                     resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
-                  //  val toJsonResponse = response.body()?.toJson()
-                  //  Log.v("RESPONSE",toJsonResponse )
-                  //  val distance = featureCollection!![0].getProperty("tilequery").asJsonObject.get("distance").toString()
-                 //   Log.v("RESPONSE", distance)
+                    //  val toJsonResponse = response.body()?.toJson()
+                    //  Log.v("RESPONSE",toJsonResponse )
+                    //  val distance = featureCollection!![0].getProperty("tilequery").asJsonObject.get("distance").toString()
+                    //   Log.v("RESPONSE", distance)
+
 
 
 
@@ -196,6 +240,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                                 curPoI!!.add(poI)
 
                             }
+                        }
 
                         }
 
@@ -206,7 +251,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                   //  Handler().postDelayed({
                    // }, 5000)
 
-                }
+
 
 
             }
@@ -272,6 +317,26 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
        // var symbolLayer: SymbolLayer = SymbolLayer("closes-poi-layer","poi-geo" )
         // symbolLayer.withProperties(PropertyFactory.iconImage("closes-poi-marker"))
+
+    }
+
+    private fun addRouteLayer(loadedMapStyle: Style){
+
+        loadedMapStyle.addSource(
+            GeoJsonSource(
+                ROUTE_SOURCE_ID,
+                FeatureCollection.fromFeatures(arrayOf())
+            )
+        )
+
+        routeLayer = LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID)
+        routeLayer!!.setProperties(
+            lineCap(Property.LINE_CAP_ROUND),
+            lineJoin(Property.LINE_JOIN_ROUND),
+            lineWidth(5f),
+            lineColor(Color.parseColor("#009688"))
+        )
+        loadedMapStyle.addLayer(routeLayer!!)
 
     }
 
@@ -346,6 +411,54 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         }
     }
 
+    @SuppressLint("RestrictedApi")
+    private fun getIncomingIntent(){
+        if (intent.hasExtra("placeName") && intent.hasExtra("placePoint") ) {
+            val placeName = intent.getStringExtra("placeName")
+            val placePointIntent =  intent.getSerializableExtra("placePoint")
+            val placePoint = Point.fromJson(placePointIntent.toString())
+            destination = placePoint
+        }
+    }
+
+    private fun getRoute(style: Style, origin: Point, destination: Point){
+        directionsClient =  MapboxDirections.builder()
+            .origin(origin)
+            .destination(destination)
+            .overview(DirectionsCriteria.OVERVIEW_FULL)
+            .profile(DirectionsCriteria.PROFILE_DRIVING)
+            .accessToken(getString(R.string.access_token))
+            .build()
+
+        directionsClient!!.enqueueCall(object : retrofit2.Callback<DirectionsResponse> {
+            override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
+                Toast.makeText(applicationContext,"Routing failed",Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
+                if (response.body()!!.routes().size>=1){
+                    currentRoute = response.body()!!.routes().get(0)
+
+                    //Toast.makeText(applicationContext, currentRoute!!.distance().toString(), Toast.LENGTH_SHORT).show()
+
+                    if (style.isFullyLoaded){
+                        // Retrieve and update the source designated for showing the directions route
+                        val source: GeoJsonSource = style.getSourceAs(ROUTE_SOURCE_ID)!!
+
+                        // Create a LineString with the directions route's geometry and
+                        // reset the GeoJSON source for the route LineLayer source
+                        if (source != null) {
+                            source.setGeoJson(FeatureCollection.fromFeature(
+                                Feature.fromGeometry(LineString.fromPolyline(currentRoute!!.geometry()!!, PRECISION_6))));
+                        }
+                    }
+                }
+            }
+
+
+        })
+    }
+
 
     override fun onStart() {
         mapView.onStart()
@@ -386,6 +499,9 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
         }
+        if (directionsClient!=null){
+            directionsClient!!.cancelCall()
+        }
         mapView.onDestroy()
         if (mTTS !=null){
             mTTS!!.stop()
@@ -409,12 +525,15 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             }
         }
 
+        @SuppressLint("RestrictedApi")
         override fun onSuccess(result: LocationEngineResult?) {
             var activity : MapBoxActivity = activityWeakReference?.get()!!
             if (activity != null) {
 
                 var point : LatLng ?= LatLng(result?.lastLocation?.latitude!!, result.lastLocation?.longitude!!)
-
+                if (point!=null){
+                    activity.currentLocation = Point.fromLngLat(point!!.longitude,point!!.latitude)
+                }
                 // Make tile query
                 activity.makeTilequeryApiCall(activity.mapboxMap.style!!,point!!)
 
@@ -430,16 +549,14 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                     activity.mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position))
 
-
-
                 }
 
-                // Initialise lastLocation, update and announce every 10 meters
-                if (activity.lastLocation == null){
-                    activity.lastLocation = point
-                }else if (point.distanceTo(activity.lastLocation!!)>=10){
+                // Initialise lastQueryLocation, update and announce every 10 meters
+                if (activity.lastQueryLocation == null){
+                    activity.lastQueryLocation = point
+                }else if (point.distanceTo(activity.lastQueryLocation!!)>=10 && activity.mapboxMap.style!!!=null){
                     Log.v("RESPONSE", "\n")
-                    Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastLocation!!).toString())
+                    Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastQueryLocation!!).toString())
 
                     // Closes PoI
                     var minDistancePoI = activity.curPoI.minBy { it ->  it.distance }
@@ -453,7 +570,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                             val output = poi.category_en + ": " + poi.name + ", " + String.format("%.2f", poi.distance) + " meters away"
                             Log.v("RESPONSE", output)
                         }
-                        activity.lastLocation = point
+                        activity.lastQueryLocation = point
 
                     }
 
@@ -506,15 +623,35 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                     announcement = announcement.replace("\"", "")
                     Log.v("ANNOUNCE", announcement)
 
-                    activity.speakText(announcement)
+                    // Don't speak if last closest point is the same as current closest point.
+                    if (activity.lastAnnouncement==null){
+                        activity.speakText(announcement)
+                        activity.lastAnnouncement = announcement
+                    }else if (announcement != activity.lastAnnouncement ) {
+                        activity.speakText(announcement)
+                        activity.lastAnnouncement = announcement
+                    }
+                    Log.v("REROUTE",activity.destination.toString() + " " + activity.navigationMode.toString())
+                    // Reroute every 10m
+                    if ( activity.destination!=null && activity.navigationMode==true){
 
+                        activity.getRoute(activity.mapboxMap.style!!, Point.fromLngLat(point!!.longitude,point!!.latitude), activity.destination!!)
+                        Toast.makeText(activity.applicationContext, activity.currentRoute!!.distance().toString(), Toast.LENGTH_SHORT).show()
+                       // if (activity.currentRoute!=null)
+                        activity.speakText(activity.currentRoute!!.distance().toString() + " meters away")
+                    }
 
                 }
 
+                // Start routing after intent
+                if ( activity.destination!=null && activity.navigationMode==false){
+                    activity.navigationMode=true
+                    activity.getRoute(activity.mapboxMap.style!!, Point.fromLngLat(point!!.longitude,point!!.latitude), activity.destination!!)
+                    activity.cancelNav!!.isClickable = true
+                    activity.cancelNav!!.isFocusable = true
 
-
-
-
+                    activity.cancelNav!!.visibility= View.VISIBLE
+                }
 
             }
         }
@@ -563,10 +700,10 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private fun speakText(text: String ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             if (mTTS!=null)
-            mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+            mTTS!!.speak(text, TextToSpeech.QUEUE_ADD, null, null);
         } else {
             if (mTTS!=null)
-            mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+            mTTS!!.speak(text, TextToSpeech.QUEUE_ADD, null);
         }
     }
 
