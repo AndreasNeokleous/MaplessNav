@@ -85,7 +85,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private val ACT_CHECK_TTS_DATA = 12345
     private var mTTS: TextToSpeech? = null
     private var imm: InputMethodManager? = null;
-    private var lastAnnouncement: String?=null
 
 
     @SuppressLint("RestrictedApi")
@@ -115,7 +114,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         }
 
         cancelNav = findViewById(R.id.cancelNavFab)
-      //  fabButton =
+        //  fabButton =
         cancelNav!!.setOnClickListener{
             if (directionsClient!=null){
                 directionsClient!!.cancelCall()
@@ -144,8 +143,8 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
-     //   mapboxMap.setStyle(Style.Builder().fromUrl(
-     //        "mapbox://styles/mapbox/cjerxnqt3cgvp2rmyuxbeqme7")){
+        //   mapboxMap.setStyle(Style.Builder().fromUrl(
+        //        "mapbox://styles/mapbox/cjerxnqt3cgvp2rmyuxbeqme7")){
         // Show compass
         mapboxMap.uiSettings.isCompassEnabled = true
         // Disable fading animation
@@ -153,8 +152,8 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
         mapboxMap.setStyle(Style.MAPBOX_STREETS, object:  Style.OnStyleLoaded {
             override fun onStyleLoaded(style: Style) {
-             //  addClickLayer(style)
-            //  mapboxMap.addOnMapClickListener(this@MapBoxActivity)
+                //  addClickLayer(style)
+                //  mapboxMap.addOnMapClickListener(this@MapBoxActivity)
                 addResultLayer(style)
                 enableLocationComponent(style)
                 addClosesPoILayer(style)
@@ -164,9 +163,9 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         })
 
 
-           //
+        //
 
-    //    }
+        //    }
     }
 
 
@@ -242,14 +241,14 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                             }
                         }
 
-                        }
-
-
-
                     }
-                     //   Log.v("RESPONSE", "5s past")
-                  //  Handler().postDelayed({
-                   // }, 5000)
+
+
+
+                }
+                //   Log.v("RESPONSE", "5s past")
+                //  Handler().postDelayed({
+                // }, 5000)
 
 
 
@@ -257,7 +256,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             }
 
             override fun onFailure(call: retrofit2.Call<FeatureCollection>, t: Throwable) {
-               // Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
+                // Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
             }
 
         })
@@ -295,10 +294,10 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         loadedMapStyle.addImage("CLOSES-POI-ID", BitmapFactory.decodeResource(
             this.resources, R.drawable.red_marker_s))
 
-    //    var geoJsonSource: GeoJsonSource = GeoJsonSource("poi-geo", Feature.fromGeometry(
-    //       Point.fromLngLat(latLng.longitude,latLng.latitude)
-    //    ))
-    //    loadedMapStyle.addSource(geoJsonSource)
+        //    var geoJsonSource: GeoJsonSource = GeoJsonSource("poi-geo", Feature.fromGeometry(
+        //       Point.fromLngLat(latLng.longitude,latLng.latitude)
+        //    ))
+        //    loadedMapStyle.addSource(geoJsonSource)
 
         loadedMapStyle.addSource(
             GeoJsonSource(
@@ -315,7 +314,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             )
         )
 
-       // var symbolLayer: SymbolLayer = SymbolLayer("closes-poi-layer","poi-geo" )
+        // var symbolLayer: SymbolLayer = SymbolLayer("closes-poi-layer","poi-geo" )
         // symbolLayer.withProperties(PropertyFactory.iconImage("closes-poi-marker"))
 
     }
@@ -413,7 +412,9 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     @SuppressLint("RestrictedApi")
     private fun getIncomingIntent(){
+
         if (intent.hasExtra("placeName") && intent.hasExtra("placePoint") ) {
+
             val placeName = intent.getStringExtra("placeName")
             val placePointIntent =  intent.getSerializableExtra("placePoint")
             val placePoint = Point.fromJson(placePointIntent.toString())
@@ -554,7 +555,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 // Initialise lastQueryLocation, update and announce every 10 meters
                 if (activity.lastQueryLocation == null){
                     activity.lastQueryLocation = point
-                }else if (point.distanceTo(activity.lastQueryLocation!!)>=10 && activity.mapboxMap.style!!!=null){
+                }else if (point.distanceTo(activity.lastQueryLocation!!)>=20 && activity.mapboxMap.style!!!=null){
                     Log.v("RESPONSE", "\n")
                     Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastQueryLocation!!).toString())
 
@@ -563,7 +564,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                     var poiSource: GeoJsonSource?  = activity.mapboxMap.style!!.getSourceAs(activity.CLOSES_POI_SOURCE_ID)
                     poiSource?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(minDistancePoI!!.long,minDistancePoI!!.lat)))
-               //     activity.addClosesPoILayer(activity.mapboxMap.style!!, latLngMinDistancePoI)
+                    //     activity.addClosesPoILayer(activity.mapboxMap.style!!, latLngMinDistancePoI)
 
                     if (activity.curPoI !=null ){
                         for (poi in activity.curPoI!!){
@@ -590,13 +591,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                     // Calculate bearing between User and PoI
                     var dLon = (lng2!! - lng1!!)
-                /**    var y = Math.sin(dLon) * Math.cos(lat2!!)
+                    /**    var y = Math.sin(dLon) * Math.cos(lat2!!)
                     var x = Math.cos(lat1!!)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon)
                     var poIbring  =Math.toDegrees((Math.atan2(y, x)))
-
                     // Calculate closes PoI bearing in relation to user's bearing
                     poIbring = (360 - ((poIbring + 360) % 360))
-                    */
+                     */
                     var dPhi = Math.log(Math.tan(lat2!!/2.0+Math.PI/4.0)/Math.tan(lat1!!/2.0+Math.PI/4.0))
                     if (Math.abs(dLon) > Math.PI){
                         if (dLon > 0.0){
@@ -623,33 +623,25 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                     announcement = announcement.replace("\"", "")
                     Log.v("ANNOUNCE", announcement)
 
-                    // Don't speak if last closest point is the same as current closest point.
-                    if (activity.lastAnnouncement==null){
-                        activity.speakText(announcement)
-                        activity.lastAnnouncement = announcement
-                    }else if (announcement != activity.lastAnnouncement ) {
-                        activity.speakText(announcement)
-                        activity.lastAnnouncement = announcement
-                    }
-                    Log.v("REROUTE",activity.destination.toString() + " " + activity.navigationMode.toString())
-                    // Reroute every 10m
-                    if ( activity.destination!=null && activity.navigationMode==true){
+                    activity.speakText(announcement)
 
+                    Log.v("REROUTE",activity.destination.toString() + " " + activity.navigationMode.toString())
+                    // Reroute every 20m
+                    if ( activity.destination!=null && activity.currentRoute!=null && activity.navigationMode==true){
                         activity.getRoute(activity.mapboxMap.style!!, Point.fromLngLat(point!!.longitude,point!!.latitude), activity.destination!!)
                         Toast.makeText(activity.applicationContext, activity.currentRoute!!.distance().toString(), Toast.LENGTH_SHORT).show()
-                       // if (activity.currentRoute!=null)
-                        activity.speakText(activity.currentRoute!!.distance().toString() + " meters away")
+                        // if (activity.currentRoute!=null)
+                        activity.speakText(activity.currentRoute!!.distance()!!.toInt().toString() + " meters away")
                     }
-
                 }
 
                 // Start routing after intent
                 if ( activity.destination!=null && activity.navigationMode==false){
-                    activity.navigationMode=true
+                    Log.v("FIRSTROUTE","FIRST")
+                    activity.navigationMode = true
                     activity.getRoute(activity.mapboxMap.style!!, Point.fromLngLat(point!!.longitude,point!!.latitude), activity.destination!!)
                     activity.cancelNav!!.isClickable = true
                     activity.cancelNav!!.isFocusable = true
-
                     activity.cancelNav!!.visibility= View.VISIBLE
                 }
 
@@ -699,11 +691,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     private fun speakText(text: String ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            if (mTTS!=null)
-            mTTS!!.speak(text, TextToSpeech.QUEUE_ADD, null, null);
+
+            if (mTTS!=null && !mTTS!!.isSpeaking)
+                mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
         } else {
-            if (mTTS!=null)
-            mTTS!!.speak(text, TextToSpeech.QUEUE_ADD, null);
+            if (mTTS!=null &&!mTTS!!.isSpeaking)
+                mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null);
         }
     }
 
