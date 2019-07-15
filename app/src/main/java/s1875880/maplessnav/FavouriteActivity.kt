@@ -3,6 +3,7 @@ package s1875880.maplessnav
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import com.mapbox.geojson.Point
@@ -16,6 +17,7 @@ class FavouriteActivity : AppCompatActivity() {
     /*var favouritesTV : TextView ?=null*/
     var favouritesNameList: ArrayList<String>? = ArrayList<String>()
     var favouritesPointList: ArrayList<String>? =  ArrayList<String>()
+    var currentLocation: Point ?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,21 +55,15 @@ class FavouriteActivity : AppCompatActivity() {
                 favouritesPointList!!.add((cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_POINT))))
 
             }
-            favourites_rv.adapter = FavouriteAdapter(applicationContext, favouritesNameList, favouritesPointList)
-
+            favourites_rv.adapter = FavouriteAdapter(applicationContext, favouritesNameList, favouritesPointList, currentLocation!!.toJson())
         }
-
         cursor.close()
-
     }
 
     private fun getIncomingIntent(){
-        if (intent.hasExtra("placeName") && intent.hasExtra("placeCentre") ) {
-            val placeName = intent.getStringExtra("placeName")
-            val placeCentre =  intent.getSerializableExtra("placeCentre") as? Point
-
-          //  Toast.makeText(applicationContext,placeName + " " +placeCentre,Toast.LENGTH_SHORT).show()
-
+        if (intent.hasExtra("currentLocation")) {
+            currentLocation = Point.fromJson(intent.getStringExtra("currentLocation"))
+            Log.v("CURRENT_LOCATION",currentLocation!!.toJson())
         }
     }
 

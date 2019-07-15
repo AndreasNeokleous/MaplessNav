@@ -131,9 +131,14 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
 
         }
+
         favouritesFab.setOnClickListener {
-            val intent = Intent(this, FavouriteActivity::class.java)
-            startActivity(intent)
+            if (currentLocation!=null){
+                val intent = Intent(this, FavouriteActivity::class.java)
+                intent.putExtra("currentLocation",currentLocation!!.toJson())
+                if (mTTS!=null) mTTS!!.stop()
+                startActivity(intent)
+            }
         }
 
 
@@ -418,6 +423,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             val placeName = intent.getStringExtra("placeName")
             val placePointIntent =  intent.getSerializableExtra("placePoint")
             val placePoint = Point.fromJson(placePointIntent.toString())
+            val currentLocation = Point.fromJson(intent.getStringExtra("currentLocation"))
             destination = placePoint
         }
     }
@@ -462,21 +468,25 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
 
     override fun onStart() {
-        mapView.onStart()
         super.onStart()
+        mapView.onStart()
+
+
     }
 
     override fun onResume() {
-        mapView.onResume()
         super.onResume()
+        mapView.onResume()
+
     }
 
     override fun onPause() {
+        super.onPause()
         mapView.onPause()
         if (mTTS !=null){
             mTTS!!.stop()
         }
-        super.onPause()
+
     }
 
     override fun onStop() {

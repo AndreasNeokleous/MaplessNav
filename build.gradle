@@ -10,6 +10,7 @@ buildscript {
         maven { url "http://oss.sonatype.org/content/repositories/snapshots/" }
     }
     dependencies {
+        // Fix Navigation UI SDK
         classpath 'com.android.tools.build:gradle:3.2.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         // NOTE: Do not place your application dependencies here; they belong

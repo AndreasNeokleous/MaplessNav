@@ -2,6 +2,7 @@ package s1875880.maplessnav
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Point
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,7 +15,7 @@ import kotlinx.android.synthetic.main.geocode_result.view.*
  * Created by Andreas Neokleous.
  */
 
-class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?, val placePoints: ArrayList<String>?) : RecyclerView.Adapter<FavViewHolder>(){
+class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?, val placePoints: ArrayList<String>?, val currentLocation: String) : RecyclerView.Adapter<FavViewHolder>(){
 
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FavViewHolder {
@@ -29,11 +30,10 @@ class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?,
         holder?.favTV?.text = placeNames!!.get(position)
 
         holder?.parentLayout.setOnClickListener {
-
-
             val intent = Intent(context, MapBoxActivity::class.java)
             intent.putExtra("placeName", placeNames?.get(position))
             intent.putExtra("placePoint", placePoints?.get(position))
+            intent.putExtra("currentLocation", currentLocation)
             context.startActivity(intent)
 
 

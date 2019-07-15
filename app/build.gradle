@@ -20,6 +20,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    // Fix Navigation UI SDK
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -42,7 +43,7 @@ dependencies {
     //manage permissions on runtime
     implementation 'com.github.hotchemi:permissionsdispatcher:4.1.0'
     annotationProcessor 'com.github.hotchemi:permissionsdispatcher-processor:4.1.0'
-   // implementation 'com.squareup.okhttp3:okhttp:3.12.1'
+    // implementation 'com.squareup.okhttp3:okhttp:3.12.1'
 
     //mapbox
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:7.3.0'
@@ -53,9 +54,7 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:4.5.0'
     implementation 'com.google.android.material:material:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
-  //  implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation:0.40.0'
+    //  implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation:0.40.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.40.0'
 
 }
-
-
