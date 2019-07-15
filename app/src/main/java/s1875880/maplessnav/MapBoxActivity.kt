@@ -46,6 +46,7 @@ import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.style.layers.LineLayer
 import com.mapbox.mapboxsdk.style.layers.Property
 import kotlinx.android.synthetic.main.activity_map_box.*
+import org.w3c.dom.Text
 import retrofit2.Call
 import retrofit2.Response
 import java.lang.Exception
@@ -66,7 +67,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     private val callback = MapBoxLocationCallback(this)
     private var curPoI  = arrayListOf<PoI>()
     private var lastQueryLocation: LatLng? = null
-
+    private var  tilequery: MapboxTilequery?=null
 
     private val ROUTE_LAYER_ID = "route-layer-id"
     private val ROUTE_SOURCE_ID = "route-source-id"
@@ -136,7 +137,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             if (currentLocation!=null){
                 val intent = Intent(this, FavouriteActivity::class.java)
                 intent.putExtra("currentLocation",currentLocation!!.toJson())
-                if (mTTS!=null) mTTS!!.stop()
+                if (mTTS!=null) mTTS!!.shutdown()
                 startActivity(intent)
             }
         }
@@ -155,17 +156,14 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         // Disable fading animation
         mapboxMap.uiSettings.setCompassFadeFacingNorth(false)
 
-        mapboxMap.setStyle(Style.MAPBOX_STREETS, object:  Style.OnStyleLoaded {
-            override fun onStyleLoaded(style: Style) {
-                //  addClickLayer(style)
-                //  mapboxMap.addOnMapClickListener(this@MapBoxActivity)
-                addResultLayer(style)
-                enableLocationComponent(style)
-                addClosesPoILayer(style)
-                addRouteLayer(style)
-
-            }
-        })
+        mapboxMap.setStyle(Style.MAPBOX_STREETS) { style ->
+            //  addClickLayer(style)
+            //  mapboxMap.addOnMapClickListener(this@MapBoxActivity)
+            addResultLayer(style)
+            enableLocationComponent(style)
+            addClosesPoILayer(style)
+            addRouteLayer(style)
+        }
 
 
         //
@@ -175,7 +173,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
 
     fun makeTilequeryApiCall(style: Style, point: LatLng){
-        var tilequery: MapboxTilequery = MapboxTilequery.builder()
+         tilequery = MapboxTilequery.builder()
             .accessToken(getString(R.string.access_token))
             .mapIds("mapbox.mapbox-streets-v8")
             .query(Point.fromLngLat(point.longitude, point.latitude))
@@ -186,12 +184,14 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             .layers("poi_label")
             .build()
 
-        tilequery.enqueueCall(object : retrofit2.Callback<FeatureCollection> {
+        tilequery!!.enqueueCall(object : retrofit2.Callback<FeatureCollection> {
             override fun onResponse(
                 call: retrofit2.Call<FeatureCollection>,
                 response: retrofit2.Response<FeatureCollection>
             ) {
-                val resultSource: GeoJsonSource ?= style.getSourceAs(RESULT_GEOJSON_SOURCE_ID)
+                var resultSource: GeoJsonSource? = null
+                if  (style!=null){
+                    resultSource = style.getSourceAs(RESULT_GEOJSON_SOURCE_ID)}
                 if (resultSource != null && response.body()?.features() != null) {
                     val featureCollection = response.body()?.features()
                     resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
@@ -471,36 +471,57 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         super.onStart()
         mapView.onStart()
 
-
     }
 
     override fun onResume() {
         super.onResume()
         mapView.onResume()
+            Log.v("MTTS", "MTTS IS NULL")
+            mTTS = TextToSpeech(applicationContext, object : TextToSpeech.OnInitListener {
+                override fun onInit(p0: Int) {
+                    if (p0 != TextToSpeech.ERROR) {
+                        mTTS!!.language = Locale.UK
+
+                    }
+                }
+            })
 
     }
 
     override fun onPause() {
         super.onPause()
-        mapView.onPause()
         if (mTTS !=null){
-            mTTS!!.stop()
+            mTTS!!.shutdown()
         }
 
+        if (mapView!=null){
+            mapView.onPause()
+
+        }
     }
 
     override fun onStop() {
         super.onStop()
-        mapView.onStop()
         if (mTTS !=null){
             mTTS!!.stop()
         }
+        if (mapboxMap.locationComponent.isLocationComponentActivated)
+            mapboxMap.locationComponent.onStop()
+        mapView!!.onStop()
+
 
     }
 
+    override fun onBackPressed() {
+        super.onBackPressed()
+        if (mTTS !=null){
+            mTTS!!.stop()
+        }
+    }
     override fun onLowMemory() {
         super.onLowMemory()
         mapView.onLowMemory()
+        mTTS!!.shutdown()
 
     }
 
@@ -515,15 +536,15 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         }
         mapView.onDestroy()
         if (mTTS !=null){
-            mTTS!!.stop()
             mTTS!!.shutdown()
         }
-
+        mapboxMap.locationComponent.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        mapView.onSaveInstanceState(outState)
         super.onSaveInstanceState(outState)
+        mapView.onSaveInstanceState(outState)
+
     }
 
     private class MapBoxLocationCallback : LocationEngineCallback<LocationEngineResult> {
@@ -565,7 +586,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 // Initialise lastQueryLocation, update and announce every 10 meters
                 if (activity.lastQueryLocation == null){
                     activity.lastQueryLocation = point
-                }else if (point.distanceTo(activity.lastQueryLocation!!)>=20 && activity.mapboxMap.style!!!=null){
+                }else if (point.distanceTo(activity.lastQueryLocation!!)>=5 && activity.mapboxMap.style!!!=null){
                     Log.v("RESPONSE", "\n")
                     Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastQueryLocation!!).toString())
 
@@ -689,7 +710,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             if (mTTS != null) {
                 val result = mTTS!!.setLanguage(Locale.UK)
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    Toast.makeText(this, "TTS language is not supported", Toast.LENGTH_LONG).show()
+                  //  Toast.makeText(this, "TTS language is not supported", Toast.LENGTH_LONG).show()
                 } else {
                     // Do smth
                 }
