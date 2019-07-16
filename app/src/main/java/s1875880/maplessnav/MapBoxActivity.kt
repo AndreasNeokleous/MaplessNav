@@ -526,7 +526,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     override fun onBackPressed() {
         super.onBackPressed()
-
         if (mTTS !=null){
             mTTS!!.shutdown()
         }
@@ -599,10 +598,10 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                 }
 
-                // Initialise lastQueryLocation, update and announce every 10 meters
+                // Initialise lastQueryLocation, update and announce every 20 meters
                 if (activity.lastQueryLocation == null){
                     activity.lastQueryLocation = point
-                }else if (point.distanceTo(activity.lastQueryLocation!!)>=5 && activity.mapboxMap!!.style!!!=null){
+                }else if (point.distanceTo(activity.lastQueryLocation!!)>=20 && activity.mapboxMap!!.style!!!=null){
                     Log.v("RESPONSE", "\n")
                     Log.v("RESPONSE", "Last call distance: " +point.distanceTo(activity.lastQueryLocation!!).toString())
 
@@ -738,7 +737,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     private fun speakText(text: String ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-
             if (mTTS!=null && !mTTS!!.isSpeaking)
                 mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
         } else {
