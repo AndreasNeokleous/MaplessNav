@@ -7,7 +7,7 @@ buildscript {
         jcenter()
         mavenCentral()
         maven { url "https://mapbox.bintray.com/mapbox" }
-        maven { url "http://oss.sonatype.org/content/repositories/snapshots/" }
+       // maven { url "http://oss.sonatype.org/content/repositories/snapshots/" }
     }
     dependencies {
         // Fix Navigation UI SDK
@@ -24,7 +24,7 @@ allprojects {
         jcenter()
         mavenCentral()
         maven { url "https://mapbox.bintray.com/mapbox" }
-        maven { url "http://oss.sonatype.org/content/repositories/snapshots/" }
+    //   maven { url "http://oss.sonatype.org/content/repositories/snapshots/" }
         
     }
 }

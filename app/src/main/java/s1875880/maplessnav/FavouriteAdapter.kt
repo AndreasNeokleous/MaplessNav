@@ -2,14 +2,12 @@ package s1875880.maplessnav
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Point
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.favourite_view.view.*
-import kotlinx.android.synthetic.main.geocode_result.view.*
 
 /**
  * Created by Andreas Neokleous.
@@ -30,7 +28,7 @@ class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?,
         holder?.favTV?.text = placeNames!!.get(position)
 
         holder?.parentLayout.setOnClickListener {
-            val intent = Intent(context, MapBoxActivity::class.java)
+            val intent = Intent(context, NavActivity::class.java)
             intent.putExtra("placeName", placeNames?.get(position))
             intent.putExtra("placePoint", placePoints?.get(position))
             intent.putExtra("currentLocation", currentLocation)
