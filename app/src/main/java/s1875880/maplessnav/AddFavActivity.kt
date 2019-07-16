@@ -23,21 +23,24 @@ class AddFavActivity : AppCompatActivity() {
     var gecodePointList: ArrayList<Point>? = ArrayList()
     var recyclerView:RecyclerView?=null
     var recyclerViewAdapter: GeocodeResultAdapter?=null
+    var currentLocation: Point ?= null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_fav)
+        getIncomingIntent()
         address = findViewById(R.id.add_fav_address)
 
         // recyclerview
         recyclerView = findViewById(R.id.geocode_results_rv)
         recyclerView!!.layoutManager = LinearLayoutManager(this)
-        recyclerViewAdapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList)
+        recyclerViewAdapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList,currentLocation!!.toJson())
         recyclerView!!.adapter = recyclerViewAdapter
       //  geocode_results_rv.layoutManager = LinearLayoutManager(this)
 
 
         // Add TextWatcher listener.
         //address!!.addTextChangedListener()
+
 
         find_address.setOnClickListener {
             if (address!!.text.toString().trim().isNotEmpty()) {
@@ -64,13 +67,13 @@ class AddFavActivity : AppCompatActivity() {
                                 geocodeResultList!!.add(result.placeName().toString())
                                 gecodePointList!!.add(result.center()!!)
                             }
-                            recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList)
+                            recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList,currentLocation!!.toJson())
                             recyclerView!!.setOnClickListener { Log.v("ONCLICK", "CLICK") }
 
                         } else {
                             geocodeResultList = ArrayList()
                             gecodePointList = ArrayList()
-                            recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList)
+                            recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList, currentLocation!!.toJson())
 
                             Toast.makeText(applicationContext,"Address not found", Toast.LENGTH_SHORT).show()
                         }
@@ -90,7 +93,12 @@ class AddFavActivity : AppCompatActivity() {
 
 
     }
-
+    private fun getIncomingIntent(){
+        if (intent.hasExtra("currentLocation")) {
+            currentLocation = Point.fromJson(intent.getStringExtra("currentLocation"))
+            Log.v("CURRENT_LOCATION",currentLocation!!.toJson())
+        }
+    }
 
 
     override fun onDestroy() {

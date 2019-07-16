@@ -30,6 +30,7 @@ class FavouriteActivity : AppCompatActivity() {
 
         addFav.setOnClickListener {
             intent = Intent(this,AddFavActivity::class.java)
+            intent.putExtra("currentLocation",currentLocation!!.toJson())
             startActivity(intent)
         }
 
@@ -55,6 +56,11 @@ class FavouriteActivity : AppCompatActivity() {
                 favouritesPointList!!.add((cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_POINT))))
 
             }
+
+            if (favourites_rv.adapter==null)
+                Log.v("NULLFINDER", "adapter")
+            if (currentLocation == null)
+                Log.v("NULLFINDER", "currentLocation")
             favourites_rv.adapter = FavouriteAdapter(applicationContext, favouritesNameList, favouritesPointList, currentLocation!!.toJson())
         }
         cursor.close()

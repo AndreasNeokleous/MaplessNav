@@ -16,7 +16,7 @@ import kotlinx.android.synthetic.main.geocode_result.view.*
  * Created by Andreas Neokleous.
  */
 
-class GeocodeResultAdapter(val context: Context, val placeNames: ArrayList<String>?, val placeCenters: ArrayList<Point>? ) : RecyclerView.Adapter<ViewHolder>() {
+class GeocodeResultAdapter(val context: Context, val placeNames: ArrayList<String>?, val placeCenters: ArrayList<Point>?,val currentLocation: String) : RecyclerView.Adapter<ViewHolder>() {
 
     // Gets the number of places in the list
     override fun getItemCount(): Int {
@@ -44,6 +44,7 @@ class GeocodeResultAdapter(val context: Context, val placeNames: ArrayList<Strin
             val intent = Intent(context, FavouriteActivity::class.java)
             intent.putExtra("placeName", placeNames?.get(position))
             intent.putExtra("placeCentre", placeCenters?.get(position))
+            intent.putExtra("currentLocation", currentLocation)
 
             context.startActivity(intent)
         }
