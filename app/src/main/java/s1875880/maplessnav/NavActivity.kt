@@ -17,6 +17,7 @@ import androidx.annotation.NonNull
 import com.mapbox.android.core.location.*
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
+import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.api.tilequery.MapboxTilequery
@@ -158,6 +159,7 @@ class NavActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener
                 .accessToken(getString(R.string.access_token))
                 .origin(origin)
                 .destination(destination)
+                .profile(DirectionsCriteria.PROFILE_WALKING)
                 .build()
                 .getRoute(object : Callback<DirectionsResponse> {
                     override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {

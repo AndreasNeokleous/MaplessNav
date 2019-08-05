@@ -11,13 +11,17 @@
         android:id="@+id/favourites_tv"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="9" />
+        android:layout_weight="9"
+        android:paddingBottom="20sp"
+        android:textColor="@color/common_google_signin_btn_text_dark_focused"
+        android:textSize="24sp" />
 
     <Button
         android:id="@+id/del_fav"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:layout_gravity="center_vertical|center_horizontal"
         android:text="Del" />
 
 </LinearLayout>

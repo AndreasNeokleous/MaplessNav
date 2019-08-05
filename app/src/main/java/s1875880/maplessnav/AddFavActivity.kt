@@ -27,6 +27,7 @@ class AddFavActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_fav)
+        title="Add a Favourite"
         getIncomingIntent()
         address = findViewById(R.id.add_fav_address)
 

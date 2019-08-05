@@ -22,6 +22,7 @@ class FavouriteActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_favourite)
+        title = "Favourites"
 
 //        favouritesTV = findViewById(R.id.favouritesTV)
 
