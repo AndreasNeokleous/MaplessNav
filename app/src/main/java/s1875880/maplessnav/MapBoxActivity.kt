@@ -184,25 +184,17 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             .dedupe(true)
             .layers("poi_label")
             .build()
-
         tilequery!!.enqueueCall(object : retrofit2.Callback<FeatureCollection> {
             override fun onResponse(
                 call: retrofit2.Call<FeatureCollection>,
                 response: retrofit2.Response<FeatureCollection>
             ) {
-
                 if (style.isFullyLoaded) {
                     var resultSource: GeoJsonSource? = null
                     resultSource = style.getSourceAs(RESULT_GEOJSON_SOURCE_ID)//}
                     if (resultSource != null && response.body()?.features() != null) {
                         val featureCollection = response.body()?.features()
                         resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
-                        //  val toJsonResponse = response.body()?.toJson()
-                        //  Log.v("RESPONSE",toJsonResponse )
-                        //  val distance = featureCollection!![0].getProperty("tilequery").asJsonObject.get("distance").toString()
-                        //   Log.v("RESPONSE", distance)
-
-
                         val featureSize = featureCollection?.size
                         if (curPoI != null)
                             curPoI!!.clear()
@@ -216,7 +208,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                                     var lat = 0.0
                                     var long = 0.0
                                     val poI = PoI(distance, category_en, name, lat, long)
-
                                     // distance from user
                                     if (feature.hasProperty("tilequery")) {
                                         distance =
@@ -229,41 +220,24 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                                         category_en = feature.getProperty("category_en").toString()
                                         poI.category_en = category_en
                                     }
-
                                     if (feature.hasProperty("name")) {
                                         name = feature.getProperty("name").toString()
                                         poI.name = name
                                     }
-
                                     val position1 = feature.geometry() as Point
                                     lat = position1.latitude()
                                     long = position1.longitude()
                                     poI.lat = lat
                                     poI.long = long
-
                                     curPoI!!.add(poI)
-
                                 }
                             }
-
                         }
-
-
                     }
                 }
-                //   Log.v("RESPONSE", "5s past")
-                //  Handler().postDelayed({
-                // }, 5000)
-
-
-
-
             }
-
             override fun onFailure(call: retrofit2.Call<FeatureCollection>, t: Throwable) {
-                // Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
             }
-
         })
     }
 
@@ -410,7 +384,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
             enableLocationComponent(mapboxMap!!.style!!)
         } else {
             Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show()
-            finish()
+            finishAfterTransition()
         }
     }
 
@@ -472,17 +446,22 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     }
 
+    @SuppressLint("MissingPermission")
     override fun onResume() {
         super.onResume()
         mapView!!.onResume()
-
+        if (locationEngine !=null) {
+            var request: LocationEngineRequest? = LocationEngineRequest.Builder(5000)
+                .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+                .setMaxWaitTime(5000).build()
+            locationEngine!!.requestLocationUpdates(request!!, callback, null)
+        }
         mTTS = null
             if (mTTS==null){ Log.v("MTTS", "MTTS IS NULL")
             mTTS = TextToSpeech(applicationContext, object : TextToSpeech.OnInitListener {
                 override fun onInit(p0: Int) {
                     if (p0 != TextToSpeech.ERROR) {
                         mTTS!!.language = Locale.UK
-
                     }
                 }
             })}
@@ -500,25 +479,21 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         if (mapView!=null){
             mapView!!.onPause()
         }
+        if (locationEngine!=null)
+            locationEngine!!.removeLocationUpdates(callback)
     }
 
     override fun onStop() {
         super.onStop()
         if (tilequery!=null)
             tilequery!!.cancelBatchCall()
-        if (locationEngine != null){
+       /* if (locationEngine != null){
             locationEngine!!.removeLocationUpdates(callback)
 
-        }
+        }*/
         if (mTTS !=null){
             mTTS!!.stop()
-            if (mapboxMap!!.locationComponent.isLocationComponentActivated)
-                mapboxMap!!.locationComponent.onStop()
-
-
-
         }
-
         mapView!!.onStop()
 
 
@@ -637,12 +612,6 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
                     // Calculate bearing between User and PoI
                     var dLon = (lng2!! - lng1!!)
-                    /**    var y = Math.sin(dLon) * Math.cos(lat2!!)
-                    var x = Math.cos(lat1!!)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon)
-                    var poIbring  =Math.toDegrees((Math.atan2(y, x)))
-                    // Calculate closes PoI bearing in relation to user's bearing
-                    poIbring = (360 - ((poIbring + 360) % 360))
-                     */
                     var dPhi = Math.log(Math.tan(lat2!!/2.0+Math.PI/4.0)/Math.tan(lat1!!/2.0+Math.PI/4.0))
                     if (Math.abs(dLon) > Math.PI){
                         if (dLon > 0.0){
@@ -723,12 +692,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     override fun onInit(status: Int) {
         if (status === TextToSpeech.SUCCESS) {
             if (mTTS != null) {
-                val result = mTTS!!.setLanguage(Locale.UK)
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                  //  Toast.makeText(this, "TTS language is not supported", Toast.LENGTH_LONG).show()
-                } else {
-                    // Do smth
-                }
+                mTTS!!.language = Locale.getDefault()
             }
         } else {
             Toast.makeText(this, "TTS initialization failed", Toast.LENGTH_LONG).show()

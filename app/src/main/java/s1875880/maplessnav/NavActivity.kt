@@ -1,255 +1,289 @@
 package s1875880.maplessnav
 
+import android.location.Location
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import com.mapbox.services.android.navigation.ui.v5.OnNavigationReadyCallback
+import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
+import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
+import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
+import com.mapbox.api.directions.v5.models.DirectionsRoute
+import com.mapbox.services.android.navigation.ui.v5.NavigationView
+import androidx.annotation.NonNull
+import com.mapbox.geojson.Point
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
+import retrofit2.Call
+import retrofit2.Response
+import com.mapbox.services.android.navigation.ui.v5.NavigationViewOptions
+import retrofit2.Callback
 import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Intent
-import android.graphics.BitmapFactory
-import android.location.Location
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.speech.tts.TextToSpeech
-import android.util.Log
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.AbsoluteSizeSpan
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.NonNull
-import com.mapbox.android.core.location.*
-import com.mapbox.android.core.permissions.PermissionsListener
-import com.mapbox.android.core.permissions.PermissionsManager
+import androidx.annotation.IdRes
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.mapbox.api.directions.v5.DirectionsCriteria
-import com.mapbox.api.directions.v5.models.DirectionsResponse
-import com.mapbox.api.directions.v5.models.DirectionsRoute
+import com.mapbox.api.directions.v5.models.BannerInstructions
 import com.mapbox.api.tilequery.MapboxTilequery
-import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
-import com.mapbox.geojson.Point
-import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
-import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
-import com.mapbox.mapboxsdk.location.LocationComponent
-import com.mapbox.mapboxsdk.maps.MapView
-import com.mapbox.mapboxsdk.maps.MapboxMap
-import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
-import com.mapbox.mapboxsdk.maps.Style
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory
-import com.mapbox.mapboxsdk.style.layers.SymbolLayer
-import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions
-import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
-import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
-import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine
-import com.mapbox.services.android.navigation.v5.milestone.Milestone
-import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener
-import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation
-import com.mapbox.services.android.navigation.v5.navigation.NavigationEventListener
-import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
-import com.mapbox.services.android.navigation.v5.offroute.OffRouteListener
-import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
-import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
-import org.jetbrains.annotations.NotNull
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import java.lang.Exception
-import java.lang.ref.WeakReference
+import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener
+import com.mapbox.services.android.navigation.ui.v5.listeners.InstructionListListener
+import com.mapbox.services.android.navigation.ui.v5.listeners.SpeechAnnouncementListener
+import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement
 import java.util.*
+import kotlin.math.roundToInt
 
-class NavActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener, NavigationEventListener,
-    OffRouteListener, ProgressChangeListener, MilestoneEventListener {
 
-    // Mapbox
-    var mapView: MapView ?=null
-    var mapboxMap: MapboxMap ?=null
-    val callback = MapBoxLocationCallback(this)
-    // Current Location an permissions
-    var locationComponent : LocationComponent?= null
-    var locationEngine: LocationEngine?=null
-    var currentLocation:Point?=null
-    var lastLocation: Location?=null
-    var permissionsManager:PermissionsManager?=null
-    // Navigation
-    var currentRoute: DirectionsRoute?=null
-    var navigationMapRoute: NavigationMapRoute ?= null
-    var destination: Point?=null
-    var origin: Point?=null
-    var navigationOptions:NavigationLauncherOptions?=null
-    // Reroute
-    var mockLocationEngine: ReplayRouteLocationEngine ?=null
-    var navigation : MapboxNavigation ?= null
-    var running: Boolean = false
-    var tracking: Boolean = false
-    var wasInTunnel: Boolean = false
-    // Points of Interest - Tilequery
-    val RESULT_GEOJSON_SOURCE_ID = "RESULT_GEOJSON_SOURCE_ID"
-    val CLOSES_POI_SOURCE_ID = "CLOSES_POI_SOURCE_ID"
-    val LAYER_ID = "LAYER_ID"
-    var curPoI  = arrayListOf<PoI>()
-    var lastQueryLocation: LatLng? = null
-    var tilequery: MapboxTilequery?=null
-    //Text-To-Speech
+class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
+    NavigationListener, ProgressChangeListener, InstructionListListener, SpeechAnnouncementListener,
+    BannerInstructionsListener, TextToSpeech.OnInitListener  {
+    private var ORIGIN = Point.fromLngLat(-3.183719, 55.944481)
+    private var DESTINATION = Point.fromLngLat(-3.186766, 55.944625)
+    private val INITIAL_ZOOM = 16.0
+    private var navigationView: NavigationView? = null
+    private var spacer: View? = null
+    private var speedWidget: TextView ?= null
+    private var bottomSheetVisible = true
+    private var instructionListShown = false
+    private var lastQueryLocation : Location? = null
+    private var tilequeryResponsePoI  = arrayListOf<PoI>()
     private val ACT_CHECK_TTS_DATA = 12345
     private var mTTS: TextToSpeech? = null
     private var imm: InputMethodManager? = null;
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_AppCompat_Light_NoActionBar)
+        getIncomingIntent()
         super.onCreate(savedInstanceState)
         Mapbox.getInstance(this,getString(R.string.access_token))
         setContentView(R.layout.activity_nav)
-        // Initialize Mapbox
-        mapView = findViewById(R.id.mapViewNav)
-        mapView!!.onCreate(savedInstanceState)
-        mapView!!.getMapAsync(this)
-        // Setup Text-to-Speech
+        navigationView = findViewById(R.id.navigationView)
+        speedWidget = findViewById(R.id.speed_limit)
+        spacer = findViewById(R.id.spacer)
+        setSpeedWidgetAnchor(R.id.summaryBottomSheet)
+
+        val initialPosition : CameraPosition =  CameraPosition.Builder()
+            .target(LatLng(ORIGIN.latitude(),ORIGIN.longitude()))
+            .zoom(INITIAL_ZOOM)
+            .build()
+        navigationView!!.onCreate(savedInstanceState)
+        navigationView!!.initialize(this, initialPosition)
+
         imm = this.getSystemService(Service.INPUT_METHOD_SERVICE) as InputMethodManager?
-        if ( mTTS == null) {
-            var ttsIntent: Intent? = Intent()
-            ttsIntent!!.action = TextToSpeech.Engine.ACTION_CHECK_TTS_DATA
-            startActivityForResult(ttsIntent, ACT_CHECK_TTS_DATA)
+        val ttsIntent: Intent? = Intent()
+        ttsIntent!!.action = TextToSpeech.Engine.ACTION_CHECK_TTS_DATA
+        startActivityForResult(ttsIntent, ACT_CHECK_TTS_DATA)
+
+    }
+
+
+    override fun onNavigationReady(isRunning: Boolean) {
+        fetchRoute()
+    }
+
+    override fun onNavigationFinished() {
+        mTTS!!.stop()
+        mTTS!!.shutdown()
+        finish()
+    }
+
+    override fun onNavigationRunning() {
+    }
+
+    override fun onCancelNavigation() {
+        mTTS!!.stop()
+        mTTS!!.shutdown()
+        finish()
+    }
+
+    override fun onProgressChange(location: Location?, routeProgress: RouteProgress?) {
+        setSpeed(location!!)
+        if (lastQueryLocation == null) {
+            lastQueryLocation = location
+            getClosestPoI(LatLng(location.latitude, location.longitude), location)
+        }else if (location.distanceTo(lastQueryLocation!!)>=20){
+            lastQueryLocation = location
+            getClosestPoI(LatLng(location.latitude, location.longitude), location)
         }
     }
 
-    override fun onMapReady(@NonNull mapboxMap: MapboxMap) {
-        this.mapboxMap = mapboxMap
-        mapboxMap.setStyle(Style.MAPBOX_STREETS, object:  Style.OnStyleLoaded {
-            override fun onStyleLoaded(@NonNull style: Style) {
-                getIncomingIntent()
-                enableLocationComponent(style)
-                getRoute(origin, destination)
-                addPoILayer(style)
+    override fun onInstructionListVisibilityChanged(visible: Boolean) {
+        instructionListShown = visible
+        speedWidget!!.visibility = if (visible) View.GONE else View.VISIBLE
+    }
+
+    override fun willVoice(announcement: SpeechAnnouncement?): SpeechAnnouncement {
+        return  announcement!!
+    }
+
+    override fun willDisplay(instructions: BannerInstructions?): BannerInstructions {
+        return instructions!!
+    }
+
+
+    private fun startNavigation(directionsRoute: DirectionsRoute ) {
+        val options: NavigationViewOptions.Builder  =
+      NavigationViewOptions.builder()
+        .navigationListener(this)
+        .directionsRoute(directionsRoute)
+        .shouldSimulateRoute(false)
+        .progressChangeListener(this)
+        .instructionListListener(this)
+        .speechAnnouncementListener(this)
+        .bannerInstructionsListener(this)
+
+    setBottomSheetCallback(options);
+    navigationView!!.startNavigation(options.build());
+    }
+    private fun fetchRoute() {
+        NavigationRoute.builder(this)
+          .accessToken(getString(R.string.access_token))
+          .origin(ORIGIN)
+          .destination(DESTINATION)
+          .alternatives(true)
+          .profile(DirectionsCriteria.PROFILE_WALKING)
+          .build()
+          .getRoute(object : Callback<DirectionsResponse> {
+              override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
+              }
+              override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
+                  val directionsRoute: DirectionsRoute = response.body()!!.routes().get(0)
+                  startNavigation(directionsRoute);
+              }
+          })
+    }
+
+    private fun setSpeedWidgetAnchor(@IdRes res : Int) {
+        val layoutParams : CoordinatorLayout.LayoutParams  = spacer!!.layoutParams as  (CoordinatorLayout.LayoutParams)
+        layoutParams.anchorId = res;
+        spacer!!.layoutParams = layoutParams;
+    }
+    private fun setBottomSheetCallback(options: NavigationViewOptions.Builder)
+    {
+        options.bottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback () {
+            override fun onSlide(p0: View, p1: Float) {
+            }
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                when(newState) {
+                    BottomSheetBehavior.STATE_HIDDEN ->
+                        {
+                        bottomSheetVisible = false
+                        setSpeedWidgetAnchor(R.id.recenterBtn);
+
+                        }
+                    BottomSheetBehavior.STATE_EXPANDED ->
+                    {
+                        bottomSheetVisible = true;
+                    }
+                    BottomSheetBehavior.STATE_SETTLING ->
+                    {
+                        if (!bottomSheetVisible) {
+                            setSpeedWidgetAnchor(R.id.summaryBottomSheet);
+                        }
+                    }
+                    else -> return
+                }
             }
         })
     }
+
+
+    private fun setSpeed(location: Location){
+        var string: String = String.format("%d\nMPH",(location.getSpeed() * 2.2369).roundToInt())
+        val mphTextSize : Int  = getResources()!!.getDimensionPixelSize(R.dimen.mph_text_size);
+        val speedTextSize: Int = getResources()!!.getDimensionPixelSize(R.dimen.speed_text_size);
+
+        var spannableString : SpannableString  = SpannableString(string);
+        spannableString.setSpan(AbsoluteSizeSpan(mphTextSize),
+            string.length - 4, string.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+
+        spannableString.setSpan(AbsoluteSizeSpan(speedTextSize),
+          0, string.length - 3, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+
+        speedWidget!!.text = spannableString;
+        if (!instructionListShown) {
+            speedWidget!!.visibility = View.VISIBLE;
+        }
+    }
+    public override fun onStart() {
+        super.onStart()
+        navigationView!!.onStart()
+    }
+
+    public override fun onResume() {
+        super.onResume()
+        navigationView!!.onResume()
+    }
+
+    override fun onLowMemory() {
+        navigationView!!.onLowMemory()
+        mTTS!!.stop()
+        mTTS!!.shutdown()
+        super.onLowMemory()
+    }
+
+    override fun onBackPressed() {
+        mTTS!!.stop()
+        mTTS!!.shutdown()
+        // If the navigation view didn't need to do anything, call super
+        if (!navigationView!!.onBackPressed()) {
+            super.onBackPressed()
+        }
+
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        navigationView!!.onSaveInstanceState(outState)
+        super.onSaveInstanceState(outState)
+    }
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        navigationView!!.onRestoreInstanceState(savedInstanceState)
+    }
+
+    public override fun onPause() {
+        super.onPause()
+        navigationView!!.onPause()
+    }
+
+    public override fun onStop() {
+        navigationView!!.onStop()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        navigationView!!.onDestroy()
+        mTTS!!.stop()
+        mTTS!!.shutdown()
+        super.onDestroy()
+    }
+
 
     @SuppressLint("RestrictedApi")
     private fun getIncomingIntent(){
         if (intent.hasExtra("placeName") && intent.hasExtra("placePoint")  && intent.hasExtra("currentLocation")) {
             val placeName = intent.getStringExtra("placeName")
-            destination = Point.fromJson(intent.getSerializableExtra("placePoint").toString())
-            origin = Point.fromJson(intent.getStringExtra("currentLocation"))
+            DESTINATION = Point.fromJson(intent.getSerializableExtra("placePoint").toString())
+            ORIGIN = Point.fromJson(intent.getStringExtra("currentLocation"))
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun enableLocationComponent(@NotNull loadedMapStyle: Style?){
-        if (PermissionsManager.areLocationPermissionsGranted(this)) {
-            // Location  Component
-            locationComponent = mapboxMap!!.locationComponent
-            locationComponent!!.activateLocationComponent(this, loadedMapStyle!!)
-            locationComponent!!.isLocationComponentEnabled = true
-
-            // Location Engine
-            locationEngine = LocationEngineProvider.getBestLocationEngine(this)
-            var request : LocationEngineRequest?= LocationEngineRequest.Builder(5000)
-                .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-                .setMaxWaitTime(5000).build()
-            if (request != null)
-                locationEngine!!.requestLocationUpdates(request, callback, mainLooper)
-            locationEngine!!.getLastLocation(callback)
-        } else{
-            permissionsManager = PermissionsManager(this)
-            permissionsManager!!.requestLocationPermissions(this)
-        }
-    }
-
-    private fun getRoute(origin: Point?, destination: Point?){
-        if (destination!=null && origin!=null) {
-            NavigationRoute.builder(this)
-                .accessToken(getString(R.string.access_token))
-                .origin(origin)
-                .destination(destination)
-                .profile(DirectionsCriteria.PROFILE_WALKING)
-                .build()
-                .getRoute(object : Callback<DirectionsResponse> {
-                    override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
-                        Log.v("NAVIGATION", "currentRoute " + response.body()!!.toString())
-                        if (response.body() == null) {
-                            Log.v("NAVIGATION", "Wrong access token.")
-                            return
-                        }else if (response!!.body()!!.routes().size<1){
-                            Log.v("NAVIGATION", "No routes found.")
-                            return
-                        }
-                        currentRoute = response.body()!!.routes().get(0)
-
-                        if (navigationMapRoute !=null){
-                            navigationMapRoute!!.removeRoute()
-                        }else{
-                            navigationMapRoute =
-                                NavigationMapRoute(null, mapView!!, mapboxMap!!, R.style.NavigationMapRoute)
-                        }
-                        navigationMapRoute!!.addRoute(currentRoute)
-                        navigationOptions = NavigationLauncherOptions.builder()
-                            .directionsRoute(currentRoute)
-                            .shouldSimulateRoute(false)
-                            .build()
-                        NavigationLauncher.startNavigation(this@NavActivity, navigationOptions)
-                    }
-                    override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
-                        Log.e("Navigation", "Error: " + t.message)
-                    }
-                })
-        }
-    }
-
-    private fun addPoILayer(loadedMapStyle: Style){
-        // 5 PoIs
-        loadedMapStyle.addImage("RESULT-ICON-ID", BitmapFactory.decodeResource(
-            this.resources, R.drawable.blue_marker_s))
-        loadedMapStyle.addSource(
-            GeoJsonSource(
-                RESULT_GEOJSON_SOURCE_ID,
-                FeatureCollection.fromFeatures(arrayOf())
-            )
-        )
-        loadedMapStyle.addLayer(
-            SymbolLayer(LAYER_ID, RESULT_GEOJSON_SOURCE_ID).withProperties(
-                PropertyFactory.iconImage("RESULT-ICON-ID"),
-                PropertyFactory.iconOffset(arrayOf(0f, -12f)),
-                PropertyFactory.iconIgnorePlacement(true),
-                PropertyFactory.iconAllowOverlap(true)
-            )
-        )
-
-        // Closest PoI to be announced
-        loadedMapStyle.addImage("CLOSES-POI-ID", BitmapFactory.decodeResource(
-            this.resources, R.drawable.red_marker_s))
-        loadedMapStyle.addSource(
-            GeoJsonSource(
-                CLOSES_POI_SOURCE_ID, FeatureCollection.fromFeatures(arrayOf<Feature>())
-            )
-        )
-        loadedMapStyle.addLayer(
-            SymbolLayer("closes-poi-layer",CLOSES_POI_SOURCE_ID).withProperties(
-                PropertyFactory.iconImage("CLOSES-POI-ID"),
-                PropertyFactory.iconOffset(arrayOf(0f, -12f)),
-                PropertyFactory.iconIgnorePlacement(true),
-                PropertyFactory.iconAllowOverlap(true)
-            )
-        )
-    }
-
-    override fun onRunning(running: Boolean) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun userOffRoute(location: Location?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun onProgressChange(location: Location?, routeProgress: RouteProgress?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun onMilestoneEvent(routeProgress: RouteProgress?, instruction: String?, milestone: Milestone?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-
-    fun makeTilequeryApiCall(@NonNull style: Style,@NonNull point: LatLng){
-        tilequery = MapboxTilequery.builder()
+    private fun getClosestPoI(@NonNull point: LatLng, location: Location?) {
+        var closestPoI : PoI ?= null
+        val tilequery : MapboxTilequery = MapboxTilequery.builder()
             .accessToken(getString(R.string.access_token))
             .mapIds("mapbox.mapbox-streets-v8")
             .query(Point.fromLngLat(point.longitude, point.latitude))
@@ -259,21 +293,15 @@ class NavActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener
             .dedupe(true)
             .layers("poi_label")
             .build()
-
-        tilequery!!.enqueueCall(object : retrofit2.Callback<FeatureCollection> {
+        tilequery.enqueueCall(object : retrofit2.Callback<FeatureCollection> {
             override fun onResponse(
                 call: retrofit2.Call<FeatureCollection>,
                 response: retrofit2.Response<FeatureCollection>
             ) {
-                if (style.isFullyLoaded) {
-                    var resultSource: GeoJsonSource? = null
-                    resultSource = style.getSourceAs(RESULT_GEOJSON_SOURCE_ID)//}
-                    if (resultSource != null && response.body()?.features() != null) {
+                    if (response.body()?.features() != null) {
                         val featureCollection = response.body()?.features()
-                        resultSource?.setGeoJson(FeatureCollection.fromFeatures(featureCollection!!))
                         val featureSize = featureCollection?.size
-                        if (curPoI != null)
-                            curPoI!!.clear()
+                        tilequeryResponsePoI.clear()
                         if (featureSize!! > 0) {
                             for (feature in featureCollection) {
                                 if (feature != null) {
@@ -305,16 +333,79 @@ class NavActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener
                                     long = position1.longitude()
                                     poI.lat = lat
                                     poI.long = long
-                                    curPoI!!.add(poI)
+                                    tilequeryResponsePoI.add(poI)
                                 }
                             }
+                            closestPoI = tilequeryResponsePoI.minBy { it ->  it.distance }
+                            val leftOrRight = getRelativeLocation(closestPoI, location )
+                            var announcement: String = closestPoI?.name + " " + closestPoI?.category_en + " to your " + leftOrRight
+                            announcement = announcement.replace("\"", "")
+
+                            speakText(announcement)
                         }
                     }
-                }
             }
             override fun onFailure(call: retrofit2.Call<FeatureCollection>, t: Throwable) {
             }
         })
+    }
+
+    private fun getRelativeLocation(closestPoI: PoI?, location: Location? ) : String{
+        var res: String = "none"
+        // User LatLng
+        val lat1 = location?.latitude
+        val lng1 = location?.longitude
+        val userBearing = location?.bearing
+        // Closes PoI LatLng
+        val lat2  = closestPoI?.lat
+        val lng2 = closestPoI?.long
+        // Calculate bearing between User and PoI
+        var dLon = (lng2!! - lng1!!)
+        val dPhi = Math.log(Math.tan(lat2!!/2.0+Math.PI/4.0)/Math.tan(lat1!!/2.0+Math.PI/4.0))
+        if (Math.abs(dLon) > Math.PI){
+            if (dLon > 0.0){
+                dLon = -(2.0 * Math.PI - dLon)
+            }else{
+                dLon = (2.0 * Math.PI + dLon)
+            }
+        }
+        var poIbring = (Math.toDegrees(Math.atan2(dLon, dPhi))+ 360) % 360
+        if (userBearing!!>90 && userBearing <270 ){
+            poIbring = 360-poIbring
+        }
+        if (poIbring<= 180){
+            res = "Right"
+        }else{
+            res = "Left"
+        }
+        return res
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == ACT_CHECK_TTS_DATA){
+            if (resultCode === TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
+                // Data exists, so we instantiate the TTS engine
+                mTTS = TextToSpeech(this, this)
+            } else {
+                // Data is missing, so we start the TTS installation process
+                val installIntent = Intent()
+                installIntent.action = TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA
+                startActivity(installIntent)
+            }
+        }
+        else{
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    override fun onInit(status: Int) {
+        if (status === TextToSpeech.SUCCESS) {
+            if (mTTS != null) {
+                mTTS!!.language = Locale.getDefault()
+            }
+        } else {
+            Toast.makeText(this, "TTS initialization failed", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun speakText(text: String ) {
@@ -324,169 +415,6 @@ class NavActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener
         } else {
             if (mTTS!=null &&!mTTS!!.isSpeaking)
                 mTTS!!.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-        }
-    }
-
-    // Location Permission
-    override fun onExplanationNeeded(permissionsToExplain: MutableList<String>?) {
-        Toast.makeText(this, R.string.user_location_permission_explanation, Toast.LENGTH_SHORT).show()
-    }
-    override fun onPermissionResult(granted: Boolean) {
-        if (granted){
-            enableLocationComponent(mapboxMap!!.style)
-        }else{
-            Toast.makeText(this, R.string.user_location_permission_not_granted,Toast.LENGTH_SHORT).show()
-            finish()
-        }
-    }
-
-
-
-    override fun onStart() {
-        super.onStart()
-        mapView!!.onStart()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        mapView!!.onResume()
-        mTTS = TextToSpeech(applicationContext, object : TextToSpeech.OnInitListener {
-            override fun onInit(p0: Int) {
-                if (p0 != TextToSpeech.ERROR) {
-                    mTTS!!.language = Locale.UK
-
-                }
-            }
-        })
-    }
-
-    override fun onPause() {
-        super.onPause()
-        mapView!!.onPause()
-        /*if (tilequery!=null)
-            tilequery!!.cancelBatchCall()*/
-    }
-
-    override fun onStop() {
-        super.onStop()
-        mapView!!.onStop()
-        /*if (tilequery!=null)
-            tilequery!!.cancelBatchCall()
-        if (locationEngine != null)
-            locationEngine!!.removeLocationUpdates(callback)
-        if (mTTS !=null){
-            mTTS!!.stop()
-            if (mapboxMap!!.locationComponent.isLocationComponentActivated)
-                mapboxMap!!.locationComponent.onStop()
-        }*/
-    }
-
-    override fun onSaveInstanceState(outState: Bundle?) {
-        super.onSaveInstanceState(outState)
-        mapView!!.onSaveInstanceState(outState!!)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mapView!!.onDestroy()
-        mapboxMap!!.locationComponent.onDestroy()
-        if (tilequery!=null)
-            tilequery!!.cancelBatchCall()
-        if (locationEngine != null)
-            locationEngine!!.removeLocationUpdates(callback)
-        if (mTTS !=null)
-            mTTS!!.shutdown()
-    }
-
-    override fun onLowMemory() {
-        super.onLowMemory()
-        mapView!!.onLowMemory()
-        mTTS!!.shutdown()
-    }
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-        if (mTTS !=null){
-            mTTS!!.shutdown()
-        }
-    }
-
-    class MapBoxLocationCallback : LocationEngineCallback<LocationEngineResult> {
-        override fun onFailure(exception: Exception) {
-            var activity : NavActivity = activityWeakReference?.get()!!
-            if (activity != null) {
-                Toast.makeText(activity, exception.localizedMessage,
-                    Toast.LENGTH_SHORT).show()
-            }
-        }
-        @SuppressLint("RestrictedApi")
-        override fun onSuccess(result: LocationEngineResult?) {
-            var activity : NavActivity = activityWeakReference?.get()!!
-            if (activity != null) {
-
-                var point : LatLng ?= LatLng(result?.lastLocation?.latitude!!, result.lastLocation?.longitude!!)
-                if (point!=null){
-                    activity.currentLocation = Point.fromLngLat(point!!.longitude,point!!.latitude)
-                }
-                activity.makeTilequeryApiCall(activity.mapboxMap!!.style!!,point!!)
-                if (activity.mapboxMap != null && result.lastLocation != null){
-                    activity.mapboxMap!!.locationComponent.forceLocationUpdate(result.lastLocation)
-                    val position = CameraPosition.Builder()
-                        .target(point)
-                        .zoom(18.0)
-                        .tilt(0.0)
-                        .build()
-                    activity.mapboxMap!!.animateCamera(CameraUpdateFactory.newCameraPosition(position))
-                }
-                // Initialise lastQueryLocation, update and announce every 20 meters
-                if (activity.lastQueryLocation == null){
-                    activity.lastQueryLocation = point
-                }else if (point.distanceTo(activity.lastQueryLocation!!)>=20 && activity.mapboxMap!!.style!!!=null){
-                    // Closes PoI
-                    var minDistancePoI = activity.curPoI.minBy { it ->  it.distance }
-                    var poiSource: GeoJsonSource?  = activity.mapboxMap!!.style!!.getSourceAs(activity.CLOSES_POI_SOURCE_ID)
-                    poiSource?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(minDistancePoI!!.long,minDistancePoI!!.lat)))
-                    if (activity.curPoI !=null )
-                        activity.lastQueryLocation = point
-                    // User bearing in range (0.0, 360.0]
-                    var userBearing = result.lastLocation?.bearing
-                    // User LatLng
-                    var lat1 = result.lastLocation?.latitude
-                    var lng1 = result.lastLocation?.longitude
-                    // Closes PoI LatLng
-                    var lat2  = minDistancePoI?.lat
-                    var lng2 = minDistancePoI?.long
-                    // Calculate bearing between User and PoI
-                    var dLon = (lng2!! - lng1!!)
-                    var dPhi = Math.log(Math.tan(lat2!!/2.0+Math.PI/4.0)/Math.tan(lat1!!/2.0+Math.PI/4.0))
-                    if (Math.abs(dLon) > Math.PI){
-                        if (dLon > 0.0){
-                            dLon = -(2.0 * Math.PI - dLon)
-                        }else{
-                            dLon = (2.0 * Math.PI + dLon)
-                        }
-                    }
-                    var poIbring = (Math.toDegrees(Math.atan2(dLon, dPhi))+ 360) % 360
-                    if (userBearing!!>90 && userBearing!!<270 ){
-                        poIbring = 360-poIbring
-                    }
-                    var closesPoIPoistion = "NaN"
-                    if (poIbring!=null &&  poIbring<= 180){
-                        closesPoIPoistion = "Right"
-                    }else{
-                        closesPoIPoistion = "Left"
-                    }
-                    var announcement: String = minDistancePoI?.name + " " + minDistancePoI?.category_en + " to your " + closesPoIPoistion
-                    // Trim " "
-                    announcement = announcement.replace("\"", "")
-                    activity.speakText(announcement)
-                }
-            }
-        }
-        private var activityWeakReference: WeakReference<NavActivity>?
-        constructor(activity: NavActivity)
-        {
-            this.activityWeakReference = WeakReference<NavActivity>(activity)
         }
     }
 }

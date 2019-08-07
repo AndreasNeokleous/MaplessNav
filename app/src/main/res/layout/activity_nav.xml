@@ -1,23 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:mapbox="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".MapBoxActivity">
+    tools:context=".NavActivity">
 
-
-    <com.mapbox.mapboxsdk.maps.MapView
-        android:id="@+id/mapViewNav"
+    <com.mapbox.services.android.navigation.ui.v5.NavigationView
+        android:id="@+id/navigationView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        mapbox:mapbox_cameraTargetLat="55.943341"
-        mapbox:mapbox_cameraTargetLng="-3.183499"
-        mapbox:mapbox_cameraZoom="11" >
-
-    </com.mapbox.mapboxsdk.maps.MapView>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+        app:navigationDarkTheme="@style/NavigationViewDark"
+        app:navigationLightTheme="@style/NavigationViewDark"/>
 
 
+
+    <TextView
+        android:id="@+id/speed_limit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginLeft="16dp"
+        android:background="@android:color/white"
+        android:elevation="3dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:textColor="@android:color/black"
+        android:textSize="35sp"
+        android:visibility="gone"
+        app:layout_anchor="@id/spacer"
+        app:layout_anchorGravity="top"
+        tools:ignore="MissingConstraints" />
+
+    <View
+        android:id="@+id/spacer"
+        android:layout_width="wrap_content"
+        android:layout_height="6dp"
+        android:layout_gravity="top"
+        android:background="@android:color/transparent"
+        app:layout_anchorGravity="top"
+        tools:ignore="MissingConstraints" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
