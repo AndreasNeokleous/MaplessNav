@@ -3,12 +3,10 @@ package s1875880.maplessnav
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.mapbox.services.android.navigation.ui.v5.OnNavigationReadyCallback
 import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.mapbox.api.directions.v5.models.DirectionsRoute
-import com.mapbox.services.android.navigation.ui.v5.NavigationView
 import androidx.annotation.NonNull
 import com.mapbox.geojson.Point
 import com.mapbox.api.directions.v5.models.DirectionsResponse
@@ -16,7 +14,6 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import retrofit2.Call
 import retrofit2.Response
-import com.mapbox.services.android.navigation.ui.v5.NavigationViewOptions
 import retrofit2.Callback
 import android.annotation.SuppressLint
 import android.app.Service
@@ -33,12 +30,14 @@ import android.widget.Toast
 import androidx.annotation.IdRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.BannerInstructions
 import com.mapbox.api.tilequery.MapboxTilequery
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.geometry.LatLng
+import com.mapbox.services.android.navigation.ui.v5.*
 import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener
 import com.mapbox.services.android.navigation.ui.v5.listeners.InstructionListListener
 import com.mapbox.services.android.navigation.ui.v5.listeners.SpeechAnnouncementListener
@@ -64,6 +63,7 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
     private var mTTS: TextToSpeech? = null
     private var imm: InputMethodManager? = null;
 
+    @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_AppCompat_Light_NoActionBar)
         getIncomingIntent()
@@ -81,6 +81,14 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
             .build()
         navigationView!!.onCreate(savedInstanceState)
         navigationView!!.initialize(this, initialPosition)
+        val soundButton = (navigationView!!.retrieveSoundButton() as SoundButton)
+        val soundFab =
+            soundButton.findViewById<FloatingActionButton>(com.mapbox.services.android.navigation.ui.v5.R.id.soundFab)
+        soundFab!!.visibility = View.GONE
+        val feedbackButton = (navigationView!!.retrieveFeedbackButton() as FeedbackButton)
+        val feedbackFab =
+            feedbackButton.findViewById<FloatingActionButton>(com.mapbox.services.android.navigation.ui.v5.R.id.feedbackFab)
+        feedbackFab!!.visibility = View.GONE
 
         imm = this.getSystemService(Service.INPUT_METHOD_SERVICE) as InputMethodManager?
         val ttsIntent: Intent? = Intent()
