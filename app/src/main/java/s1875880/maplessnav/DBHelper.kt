@@ -17,7 +17,7 @@ class DBHelper(context: Context, factory: SQLiteDatabase.CursorFactory?):
                 TABLE_NAME + "("
                 + COLUMN_ID + " INTEGER PRIMARY KEY," +
                 COLUMN_NAME + " TEXT," +
-                COLUMN_POINT + " STRING" +")")
+                COLUMN_POINT + " TEXT" +")")
         db.execSQL(CREATE_FAVOURITE_TABLE)
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

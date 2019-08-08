@@ -500,10 +500,11 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     }
 
     override fun onBackPressed() {
-        super.onBackPressed()
         if (mTTS !=null){
             mTTS!!.shutdown()
+
         }
+        moveTaskToBack(true)
     }
     override fun onLowMemory() {
         super.onLowMemory()

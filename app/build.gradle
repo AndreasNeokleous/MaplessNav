@@ -31,7 +31,6 @@ repositories {
     maven { url 'https://mapbox.bintray.com/mapbox' }
 }
 dependencies {
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.41.0'
     implementation "com.android.support:appcompat-v7:28.0.0"
     implementation 'com.android.support:design:28.0.0'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -61,7 +60,7 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:4.5.0'
     implementation 'com.google.android.material:material:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
-    //  implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation:0.40.0'
+    implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.41.0'
 
 
 }
