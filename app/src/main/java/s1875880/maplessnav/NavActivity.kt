@@ -275,7 +275,6 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
             .radius(50)
             .limit(5)
             .geometry("point")
-            .dedupe(true)
             .layers("poi_label")
             .build()
         tilequery.enqueueCall(object : Callback<FeatureCollection> {

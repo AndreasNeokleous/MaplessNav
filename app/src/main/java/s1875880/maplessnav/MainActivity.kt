@@ -37,7 +37,7 @@ import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.api.tilequery.MapboxTilequery
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
-import kotlinx.android.synthetic.main.activity_map_box.*
+import kotlinx.android.synthetic.main.activity_main.*
 import java.lang.Exception
 import java.lang.ref.WeakReference
 import java.util.*
@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Mapbox.getInstance(this, getString(R.string.access_token))
-        setContentView(R.layout.activity_map_box)
+        setContentView(R.layout.activity_main)
         // Mapbox
         mapView = findViewById(R.id.mapView)
         mapView!!.onCreate(savedInstanceState)
@@ -218,7 +218,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
             .radius(50)
             .limit(5)
             .geometry("point")
-            .dedupe(true)
             .layers("poi_label")
             .build()
         tilequery!!.enqueueCall(object : retrofit2.Callback<FeatureCollection> {
