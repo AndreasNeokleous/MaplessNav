@@ -3,7 +3,6 @@ package s1875880.maplessnav
 import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.mapbox.api.directions.v5.models.DirectionsRoute
@@ -39,9 +38,7 @@ import com.mapbox.geojson.FeatureCollection
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.services.android.navigation.ui.v5.*
-import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener
-import com.mapbox.services.android.navigation.ui.v5.listeners.InstructionListListener
-import com.mapbox.services.android.navigation.ui.v5.listeners.SpeechAnnouncementListener
+import com.mapbox.services.android.navigation.ui.v5.listeners.*
 import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement
 import java.util.*
 import kotlin.math.roundToInt
@@ -49,7 +46,10 @@ import kotlin.math.roundToInt
 
 class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
     NavigationListener, ProgressChangeListener, InstructionListListener, SpeechAnnouncementListener,
-    BannerInstructionsListener, TextToSpeech.OnInitListener  {
+    BannerInstructionsListener, TextToSpeech.OnInitListener, RouteListener {
+
+
+
 
     // Navigation Options
     private var ORIGIN = Point.fromLngLat(-3.183719, 55.944481)
@@ -61,6 +61,7 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
     private var speedWidget: TextView ?= null
     private var bottomSheetVisible = true
     private var instructionListShown = false
+    private var lastLocation : Location?=null
     // Tilequery API
     private var tilequeryResponsePoI  = arrayListOf<PoI>()
     private var lastQueryLocation : Location? = null
@@ -106,6 +107,22 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
         }
     }
 
+    /**
+     * Rerouting when user is off-route
+     */
+    override fun allowRerouteFrom(offRoutePoint: Point?): Boolean {
+        ORIGIN = Point.fromLngLat(lastLocation!!.longitude, lastLocation!!.latitude)
+        fetchRoute()
+        return false
+    }
+    override fun onFailedReroute(errorMessage: String?) {
+    }
+    override fun onRerouteAlong(directionsRoute: DirectionsRoute?) {
+    }
+    override fun onOffRoute(offRoutePoint: Point?) {
+    }
+    override fun onArrival() {
+    }
 
     override fun onNavigationReady(isRunning: Boolean) {
         fetchRoute()
@@ -128,6 +145,7 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
 
     override fun onProgressChange(location: Location?, routeProgress: RouteProgress?) {
         setSpeed(location!!)
+        lastLocation = location
         if (lastQueryLocation == null) {
             lastQueryLocation = location
             makeTilequeryCall(location)
@@ -161,9 +179,11 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
         .instructionListListener(this)
         .speechAnnouncementListener(this)
         .bannerInstructionsListener(this)
+          .routeListener(this)
 
     setBottomSheetCallback(options)
     navigationView!!.startNavigation(options.build())
+
     }
     private fun fetchRoute() {
         NavigationRoute.builder(this)
