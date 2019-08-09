@@ -24,6 +24,7 @@ class DBHelper(context: Context, factory: SQLiteDatabase.CursorFactory?):
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME)
         onCreate(db)
     }
+
     fun addFavourite(fav: Favourite) {
         val values = ContentValues()
         values.put(COLUMN_NAME, fav.placeName)
@@ -32,15 +33,18 @@ class DBHelper(context: Context, factory: SQLiteDatabase.CursorFactory?):
         db.insert(TABLE_NAME, null, values)
         db.close()
     }
+
     fun getAllFavourite(): Cursor? {
         val db = this.readableDatabase
         return db.rawQuery("SELECT * FROM $TABLE_NAME", null)
     }
+
     fun deleteFavourite(placeName: String){
         val db = this.writableDatabase
-        db.delete(TABLE_NAME, COLUMN_NAME + " = ?", arrayOf(placeName.toString()))
+        db.delete(TABLE_NAME, COLUMN_NAME + " = ?", arrayOf(placeName))
         db.close()
     }
+
     companion object {
         private val DATABASE_VERSION = 1
         private val DATABASE_NAME = "maplessnavdb"

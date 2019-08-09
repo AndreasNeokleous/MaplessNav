@@ -15,6 +15,9 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
+/**
+ * Created by Andreas Neokleous.
+ */
 class AddFavActivity : AppCompatActivity() {
 
     var address: EditText? = null
@@ -24,24 +27,17 @@ class AddFavActivity : AppCompatActivity() {
     var recyclerView:RecyclerView?=null
     var recyclerViewAdapter: GeocodeResultAdapter?=null
     var currentLocation: Point ?= null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_fav)
         title="Add a Favourite"
         getIncomingIntent()
         address = findViewById(R.id.add_fav_address)
-
-        // recyclerview
         recyclerView = findViewById(R.id.geocode_results_rv)
         recyclerView!!.layoutManager = LinearLayoutManager(this)
         recyclerViewAdapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList,currentLocation!!.toJson())
         recyclerView!!.adapter = recyclerViewAdapter
-      //  geocode_results_rv.layoutManager = LinearLayoutManager(this)
-
-
-        // Add TextWatcher listener.
-        //address!!.addTextChangedListener()
-
 
         find_address.setOnClickListener {
             if (address!!.text.toString().trim().isNotEmpty()) {
@@ -50,62 +46,40 @@ class AddFavActivity : AppCompatActivity() {
                     .query(address!!.text.toString())
                     .build()
 
-
                 mapboxGeocoding!!.enqueueCall(object : Callback<GeocodingResponse> {
                     override fun onResponse(call: Call<GeocodingResponse>, response: Response<GeocodingResponse>) {
                         val results = response.body()!!.features()
                         if (results.size > 0) {
-
                             geocodeResultList = ArrayList()
                             gecodePointList = ArrayList()
 
-                            // Log the first results Point.
-                            val firstResultPoint = results[0].center()
-
-                            //Response: Log.v("GEOCODE", results[0].toString())
                             for (result in results){
-                                Log.v("GEOCODE", result.center()!!.coordinates().toString())
                                 geocodeResultList!!.add(result.placeName().toString())
                                 gecodePointList!!.add(result.center()!!)
                             }
-                            recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList,currentLocation!!.toJson())
-                            recyclerView!!.setOnClickListener { Log.v("ONCLICK", "CLICK") }
 
+                            recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList,currentLocation!!.toJson())
                         } else {
                             geocodeResultList = ArrayList()
                             gecodePointList = ArrayList()
                             recyclerView!!.adapter = GeocodeResultAdapter(applicationContext,geocodeResultList,gecodePointList, currentLocation!!.toJson())
-
                             Toast.makeText(applicationContext,"Address not found", Toast.LENGTH_SHORT).show()
                         }
                     }
-
                     override fun onFailure(call: Call<GeocodingResponse>, throwable: Throwable) {
                         throwable.printStackTrace()
                     }
                 })
-
             }else{
                 Toast.makeText(applicationContext,"Enter an address", Toast.LENGTH_SHORT).show()
             }
-
-
         }
-
-
     }
+
     private fun getIncomingIntent(){
         if (intent.hasExtra("currentLocation")) {
             currentLocation = Point.fromJson(intent.getStringExtra("currentLocation"))
-            Log.v("CURRENT_LOCATION",currentLocation!!.toJson())
         }
-    }
-
-
-    override fun onDestroy() {
-        //mapboxGeocoding!!.cancelCall()
-
-        super.onDestroy()
     }
 }
 

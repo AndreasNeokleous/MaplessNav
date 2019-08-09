@@ -30,18 +30,4 @@
 
     </com.mapbox.mapboxsdk.maps.MapView>
 
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/cancelNavFab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginBottom="20dp"
-        android:clickable="false"
-        android:focusable="false"
-        android:visibility="invisible"
-        mapbox:backgroundTint="@android:color/holo_red_dark"
-        mapbox:layout_constraintBottom_toBottomOf="parent"
-        mapbox:layout_constraintStart_toStartOf="parent"
-        mapbox:srcCompat="@android:drawable/btn_dialog" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -21,22 +21,22 @@ class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?,
         return placeNames!!.size
     }
     override fun onBindViewHolder(holder: FavViewHolder, position: Int) {
-        holder?.favTV?.text = placeNames!!.get(position)
-        holder?.parentLayout.setOnClickListener {
+        holder.favTV?.text = placeNames!!.get(position)
+        holder.parentLayout.setOnClickListener {
             val intent = Intent(context, NavActivity::class.java)
-            intent.putExtra("placeName", placeNames?.get(position))
+            intent.putExtra("placeName", placeNames.get(position))
             intent.putExtra("placePoint", placePoints?.get(position))
             intent.putExtra("currentLocation", currentLocation)
             context.startActivity(intent)
         }
-        holder?.del_fav.setOnClickListener {
+        holder.del_fav.setOnClickListener {
             val dbHandler = DBHelper(context, null)
-            dbHandler.deleteFavourite(placeNames!!.get(position))
+            dbHandler.deleteFavourite(placeNames.get(position))
             Toast.makeText(context,"Favourite Deleted",Toast.LENGTH_SHORT).show()
-            placeNames!!.removeAt(position)
+            placeNames.removeAt(position)
             placePoints!!.removeAt(position)
             notifyItemRemoved(position)
-            notifyItemRangeChanged(position, placeNames!!.size)
+            notifyItemRangeChanged(position, placeNames.size)
         }
     }
 }

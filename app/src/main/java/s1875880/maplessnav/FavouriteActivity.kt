@@ -11,6 +11,9 @@ import kotlinx.android.synthetic.main.activity_favourite.*
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.geocode_result.*
 
+/**
+ * Created by Andreas Neokleous.
+ */
 
 class FavouriteActivity : AppCompatActivity() {
 
@@ -28,20 +31,16 @@ class FavouriteActivity : AppCompatActivity() {
             intent.putExtra("currentLocation",currentLocation!!.toJson())
             startActivity(intent)
         }
-
         getIncomingIntent()
+
         val dbHandler = DBHelper(this,null)
         val cursor = dbHandler.getAllFavourite()
         cursor!!.moveToFirst()
-        if (cursor!!.count > 0) {
+        if (cursor.count > 0) {
             do {
                 favouritesNameList!!.add((cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_NAME))))
                 favouritesPointList!!.add((cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_POINT))))
             }while (cursor.moveToNext())
-            if (favourites_rv.adapter==null)
-                Log.v("NULLFINDER", "adapter")
-            if (currentLocation == null)
-                Log.v("NULLFINDER", "currentLocation")
             favourites_rv.adapter = FavouriteAdapter(applicationContext, favouritesNameList, favouritesPointList, currentLocation!!.toJson())
         }
         cursor.close()
@@ -50,7 +49,6 @@ class FavouriteActivity : AppCompatActivity() {
     private fun getIncomingIntent(){
         if (intent.hasExtra("currentLocation")) {
             currentLocation = Point.fromJson(intent.getStringExtra("currentLocation"))
-            Log.v("CURRENT_LOCATION",currentLocation!!.toJson())
         }
     }
 
