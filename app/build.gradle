@@ -49,7 +49,6 @@ dependencies {
     //manage permissions on runtime
     implementation 'com.github.hotchemi:permissionsdispatcher:4.1.0'
     annotationProcessor 'com.github.hotchemi:permissionsdispatcher-processor:4.1.0'
-    // implementation 'com.squareup.okhttp3:okhttp:3.12.1'
 
     //mapbox
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:7.3.0'
@@ -58,9 +57,10 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-geojson:4.5.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:4.5.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:4.5.0'
+    implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.41.0'
+
     implementation 'com.google.android.material:material:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.41.0'
 
 
 }

@@ -43,7 +43,7 @@ import java.lang.ref.WeakReference
 import java.util.*
 
 
-class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener , TextToSpeech.OnInitListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener , TextToSpeech.OnInitListener {
 
     // Mapbox
     private var mapboxMap: MapboxMap?=null
@@ -93,7 +93,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         }
         val locManager: LocationManager  = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         if (!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            Toast.makeText(this,"Please enable location services", Toast.LENGTH_LONG).show()
+            Toast.makeText(this,"Please enable location services.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -297,7 +297,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
         // Closes PoI LatLng
         val lat2  = closestPoI?.lat
         val lng2 = closestPoI?.long
-        // Calculate bearing between User and PoI
+        // Calculate difference of longitude  between User and PoI
         var dLon = (lng2!! - lng1!!)
         val dPhi = Math.log(Math.tan(lat2!!/2.0+Math.PI/4.0)/Math.tan(lat1!!/2.0+Math.PI/4.0))
         if (Math.abs(dLon) > Math.PI){
@@ -361,13 +361,13 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
     /**
      * Location Updates
      */
-    private class MapBoxLocationCallback(activity: MapBoxActivity) : LocationEngineCallback<LocationEngineResult> {
-        private var activityWeakReference: WeakReference<MapBoxActivity>? = WeakReference(activity)
+    private class MapBoxLocationCallback(activity: MainActivity) : LocationEngineCallback<LocationEngineResult> {
+        private var activityWeakReference: WeakReference<MainActivity>? = WeakReference(activity)
 
         @SuppressLint("RestrictedApi")
         override fun onSuccess(result: LocationEngineResult?) {
             // Reference to MapBoxActivity
-            val activity : MapBoxActivity = activityWeakReference?.get()!!
+            val activity : MainActivity = activityWeakReference?.get()!!
             if (result!!.lastLocation!=null){
                 activity.currentLocation = Point.fromLngLat(result.lastLocation!!.longitude,result.lastLocation!!.latitude)
                 // Centre map to user's location
@@ -395,7 +395,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
         }
         override fun onFailure(exception: Exception) {
-            val activity : MapBoxActivity = activityWeakReference?.get()!!
+            val activity : MainActivity = activityWeakReference?.get()!!
             Toast.makeText(activity, exception.localizedMessage, Toast.LENGTH_SHORT).show()
         }
     }
@@ -415,7 +415,7 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
                 .setMaxWaitTime(5000).build()
             locationEngine!!.requestLocationUpdates(request!!, callback, null)
         }
-        // Resume text-to-speech
+        // Resume text-to-speech after onDestory
         mTTS = null
         if (mTTS==null){
             mTTS = TextToSpeech(applicationContext, TextToSpeech.OnInitListener { p0 ->
@@ -427,21 +427,12 @@ class MapBoxActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListe
 
     override fun onPause() {
         super.onPause()
-        if (mTTS !=null){
-            mTTS!!.stop()
-            mTTS!!.shutdown()
-        }
         if (mapView!=null){
             mapView!!.onPause()
         }
-        if (locationEngine!=null)
-            locationEngine!!.removeLocationUpdates(callback)
     }
 
     override fun onStop() {
-        if (mTTS !=null){
-            mTTS!!.stop()
-        }
         mapView!!.onStop()
         super.onStop()
     }

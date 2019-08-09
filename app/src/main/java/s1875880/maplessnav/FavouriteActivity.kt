@@ -3,13 +3,9 @@ package s1875880.maplessnav
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
-import android.view.View
-import android.widget.*
 import com.mapbox.geojson.Point
 import kotlinx.android.synthetic.main.activity_favourite.*
 import androidx.recyclerview.widget.LinearLayoutManager
-import kotlinx.android.synthetic.main.geocode_result.*
 
 /**
  * Created by Andreas Neokleous.
@@ -54,7 +50,7 @@ class FavouriteActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         super.onBackPressed()
-        intent = Intent(this,MapBoxActivity::class.java)
+        intent = Intent(this,MainActivity::class.java)
         startActivity(intent)
     }
 
