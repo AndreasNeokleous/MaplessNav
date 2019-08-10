@@ -21,7 +21,9 @@ class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?,
         return placeNames!!.size
     }
     override fun onBindViewHolder(holder: FavViewHolder, position: Int) {
+        // Set the place name
         holder.favTV?.text = placeNames!!.get(position)
+        // Launch navigation on item click
         holder.parentLayout.setOnClickListener {
             val intent = Intent(context, NavActivity::class.java)
             intent.putExtra("placeName", placeNames.get(position))
@@ -29,6 +31,7 @@ class FavouriteAdapter(val context: Context, val placeNames: ArrayList<String>?,
             intent.putExtra("currentLocation", currentLocation)
             context.startActivity(intent)
         }
+        // Delete the place from the list via the delete button
         holder.del_fav.setOnClickListener {
             val dbHandler = DBHelper(context, null)
             dbHandler.deleteFavourite(placeNames.get(position))
