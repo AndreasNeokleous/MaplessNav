@@ -56,6 +56,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
     private val callback = MapBoxLocationCallback(this)
     private var currentLocation:Point?=null
     private var permissionsManager: PermissionsManager = PermissionsManager(this)
+    private var locManager: LocationManager?=null
+
     // Tilequery API
     private var tilequeryResponsePoI  = arrayListOf<PoI>()
     private var lastQueryLocation: Location? = null
@@ -63,7 +65,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
     private val ACT_CHECK_TTS_DATA = 12345
     private var mTTS: TextToSpeech? = null
     private var imm: InputMethodManager? = null
-
     @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,18 +83,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
         }
         // Layout
         favouritesFab.setOnClickListener {
-            if (currentLocation!=null){
+            if (locManager!!.isProviderEnabled(LocationManager.GPS_PROVIDER) && currentLocation!=null){
                 val intent = Intent(this, FavouriteActivity::class.java)
                 intent.putExtra("currentLocation",currentLocation!!.toJson())
                 if (mTTS!=null) mTTS!!.shutdown()
                 startActivity(intent)
             }else{
-                Toast.makeText(this,"Please enable location services", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this,"Please enable location services and restart the app.", Toast.LENGTH_LONG).show()
             }
         }
-        val locManager: LocationManager  = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            Toast.makeText(this,"Please enable location services.", Toast.LENGTH_LONG).show()
+        locManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (!locManager!!.isProviderEnabled(LocationManager.GPS_PROVIDER) && PermissionsManager.areLocationPermissionsGranted(this)){
+            Toast.makeText(this,"Please enable location services and restart the app.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -199,7 +200,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
     }
     override fun onPermissionResult(granted: Boolean) {
         if (granted) {
-            enableLocationComponent(mapboxMap!!.style!!)
+            if (!locManager!!.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+                Toast.makeText(this,"Please enable location services and restart the app.", Toast.LENGTH_LONG).show()
+            }else{
+                enableLocationComponent(mapboxMap!!.style!!)
+            }
         } else {
             Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show()
             finishAfterTransition()
