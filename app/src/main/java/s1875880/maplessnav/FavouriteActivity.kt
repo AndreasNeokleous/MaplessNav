@@ -3,6 +3,7 @@ package s1875880.maplessnav
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toast
 import com.mapbox.geojson.Point
 import kotlinx.android.synthetic.main.activity_favourite.*
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -38,6 +39,8 @@ class FavouriteActivity : AppCompatActivity() {
                 favouritesPointList!!.add((cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_POINT))))
             }while (cursor.moveToNext())
             favourites_rv.adapter = FavouriteAdapter(applicationContext, favouritesNameList, favouritesPointList, currentLocation!!.toJson())
+        }else{
+            Toast.makeText(this, "Add favourite places to view them here.",Toast.LENGTH_LONG).show()
         }
         cursor.close()
     }
