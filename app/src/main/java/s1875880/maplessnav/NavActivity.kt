@@ -140,6 +140,9 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
     override fun onCancelNavigation() {
         mTTS!!.stop()
         mTTS!!.shutdown()
+        val intent = Intent(this, FavouriteActivity::class.java)
+        intent.putExtra("currentLocation",Point.fromLngLat(lastLocation!!.longitude,lastLocation!!.latitude).toJson())
+        startActivity(intent)
         finish()
     }
 
@@ -426,9 +429,13 @@ class NavActivity : AppCompatActivity(), OnNavigationReadyCallback,
     override fun onBackPressed() {
         mTTS!!.stop()
         mTTS!!.shutdown()
+
         // If the navigation view didn't need to do anything, call super
         if (!navigationView!!.onBackPressed()) {
             super.onBackPressed()
+            val intent = Intent(this, FavouriteActivity::class.java)
+            intent.putExtra("currentLocation",Point.fromLngLat(lastLocation!!.longitude,lastLocation!!.latitude).toJson())
+            startActivity(intent)
         }
     }
 

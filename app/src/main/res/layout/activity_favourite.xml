@@ -23,11 +23,13 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/favourites_rv"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:layout_margin="10dp"
+        android:layout_marginBottom="8dp"
         android:paddingLeft="20dp"
         android:paddingRight="20dp"
         android:paddingBottom="20dp"
+        app:layout_constraintBottom_toTopOf="@+id/addFav"
         app:layout_constraintTop_toTopOf="parent"
         tools:layout_editor_absoluteX="20dp" />
 </androidx.constraintlayout.widget.ConstraintLayout>

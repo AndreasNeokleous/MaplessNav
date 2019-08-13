@@ -31,21 +31,42 @@ class GeocodeResultAdapter(val context: Context, val placeNames: ArrayList<Strin
     // Binds each place in the ArrayList to a view
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.geocodeTV?.text = placeNames!!.get(position)
-        holder.parentLayout.setOnClickListener{
+        holder.parentLayout.setOnClickListener {
 
-            // add to database on favourite click
-            val dbHandler = DBHelper(context, null)
-            val fav = Favourite(placeNames.get(position), placeCenters?.get(position)!!.toJson())
-            dbHandler.addFavourite(fav)
-            Toast.makeText(context, "Added to favourites", Toast.LENGTH_SHORT).show()
+            if (placeExists(placeNames.get(position))){
+                Toast.makeText(context,"Already added.", Toast.LENGTH_SHORT).show()
+            }else {
+                // add to database on favourite click
+                val dbHandler = DBHelper(context, null)
+                val fav = Favourite(placeNames.get(position), placeCenters?.get(position)!!.toJson())
+                dbHandler.addFavourite(fav)
+                Toast.makeText(context, "Added to favourites", Toast.LENGTH_SHORT).show()
 
-            // switch to previous activity
-            val intent = Intent(context, FavouriteActivity::class.java)
-            intent.putExtra("placeName", placeNames.get(position))
-            intent.putExtra("placeCentre", placeCenters.get(position))
-            intent.putExtra("currentLocation", currentLocation)
-            context.startActivity(intent)
+                // switch to previous activity
+                val intent = Intent(context, FavouriteActivity::class.java)
+                intent.putExtra("placeName", placeNames.get(position))
+                intent.putExtra("placeCentre", placeCenters.get(position))
+                intent.putExtra("currentLocation", currentLocation)
+                context.startActivity(intent)
+            }
         }
+    }
+
+    fun placeExists(placeName: String) : Boolean {
+        val dbHandler = DBHelper(context, null)
+        val cursor = dbHandler.getAllFavourite()
+        cursor!!.moveToFirst()
+        if (cursor.count > 0) {
+            do {
+                if (placeName == cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_NAME))){
+                        cursor.close()
+                        return true
+                    }
+            } while (cursor.moveToNext())
+        }
+
+        cursor.close()
+        return false
     }
 }
 
